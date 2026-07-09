@@ -6,6 +6,7 @@ import { MessageTaskModule } from './base/message-task/message-task.module';
 import { SessionModule } from './base/session/session.module';
 import { StoredFileModule } from './base/stored-file/stored-file.module';
 import { UserModule } from './base/user/user.module';
+import { ChatModule } from './logic/chat/chat.module';
 import { QueueModule } from './queue/queue.module';
 
 export const DOMAIN_PROVIDER = [
@@ -20,6 +21,9 @@ export const DOMAIN_PROVIDER = [
   //
   ConversationModule,
   MessageModule,
+
+  //
+  ChatModule,
 
   //
   QueueModule,

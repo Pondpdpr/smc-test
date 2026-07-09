@@ -11,7 +11,7 @@ export function mockMessage(data?: Partial<Message>): Message {
     conversationId: valueOr(data?.conversationId, uuidV7()),
     role: valueOr(data?.role, 'user'),
     content: valueOr(data?.content, faker.lorem.sentence()),
-    toolCall: valueOr(data?.toolCall, null),
+    toolCalls: valueOr(data?.toolCalls, null),
     stopped: valueOr(data?.stopped, false),
     costUsdMicros: valueOr(data?.costUsdMicros, '0'),
     createdAt: valueOr(data?.createdAt, new Date()),

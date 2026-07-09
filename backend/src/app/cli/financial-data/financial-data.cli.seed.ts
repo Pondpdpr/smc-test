@@ -1,7 +1,6 @@
 import { readFileSync } from 'fs';
-import { join } from 'path';
-
 import { Command, CommandRunner } from 'nest-commander';
+import { join } from 'path';
 
 import { MainDb } from '@/infra/db/db.main';
 
@@ -47,8 +46,16 @@ export class FinancialDataCliSeed extends CommandRunner {
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        const [company, ticker, sector, year, revenue, netIncome, operatingIncome, grossProfit] =
-          line.split('\t');
+        const [
+          company,
+          ticker,
+          sector,
+          year,
+          revenue,
+          netIncome,
+          operatingIncome,
+          grossProfit,
+        ] = line.split('\t');
 
         return {
           company,

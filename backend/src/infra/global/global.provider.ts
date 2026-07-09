@@ -8,6 +8,8 @@ import { NodeMailerProvider } from './email/email.provider';
 import { EmailService } from './email/email.service';
 import { LangService } from './lang/lang.service';
 import { LoggerService } from './logger/logger.service';
+import { OpenAiClientProvider } from './openai/openai.provider';
+import { OpenAiService } from './openai/openai.service';
 import { ReqStorage } from './req-storage/req-storage.service';
 import { StorageProvider } from './storage/storage.provider';
 import { StorageService } from './storage/storage.service';
@@ -22,6 +24,7 @@ export const GLOBAL_PROVIDER: Provider[] = [
   NodeMailerProvider,
   StorageProvider,
   AmqpClientProvider,
+  OpenAiClientProvider,
 
   // Service
   LoggerService,
@@ -31,4 +34,5 @@ export const GLOBAL_PROVIDER: Provider[] = [
   ReqStorage,
   StorageService,
   AmqpService,
+  OpenAiService,
 ];

@@ -54,6 +54,17 @@ export type AppConfig = {
   crypto: {
     aesKey: string;
   };
+  openai: {
+    apiKey: string;
+    model: string;
+  };
+  usage: {
+    // Per-user spend limit and reset window (assignment section 2 & 6) -
+    // both configurable via env, e.g. lower them for fast local testing
+    // (USAGE_LIMIT_USD=0.001 USAGE_RESET_INTERVAL_SECONDS=180).
+    limitUsd: number;
+    resetIntervalSeconds: number;
+  };
 };
 
 export const config = (): AppConfig => ({
@@ -115,5 +126,15 @@ export const config = (): AppConfig => ({
   },
   crypto: {
     aesKey: get('AES_KEY').required().asString(),
+  },
+  openai: {
+    apiKey: get('OPENAI_API_KEY').default('').asString(),
+    model: get('OPENAI_MODEL').default('gpt-4o-mini').asString(),
+  },
+  usage: {
+    limitUsd: get('USAGE_LIMIT_USD').default(1).asFloat(),
+    resetIntervalSeconds: get('USAGE_RESET_INTERVAL_SECONDS')
+      .default(3600)
+      .asIntPositive(),
   },
 });

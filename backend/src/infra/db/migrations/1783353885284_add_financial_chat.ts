@@ -30,7 +30,9 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('user_id', 'uuid', (col) =>
       col.references('users.id').notNull().onDelete('cascade'),
     )
-    .addColumn('title', 'text', (col) => col.notNull().defaultTo('New conversation'))
+    .addColumn('title', 'text', (col) =>
+      col.notNull().defaultTo('New conversation'),
+    )
     .addColumn('created_at', 'timestamptz', (col) =>
       col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull(),
     )

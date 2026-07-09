@@ -15,7 +15,7 @@ export function newMessage(data: MessageNewData): Message {
     conversationId: data.conversationId,
     role: data.role,
     content: data.content,
-    toolCall: valueOr(data.toolCall, null),
+    toolCalls: valueOr(data.toolCalls, null),
     stopped: valueOr(data.stopped, false),
     costUsdMicros: valueOr(data.costUsdMicros, '0'),
     createdAt: myDayjs().toDate(),

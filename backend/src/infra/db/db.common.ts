@@ -2,14 +2,15 @@ import { promises as fs } from 'fs';
 import type {
   Expression,
   ExpressionBuilder,
+  InsertObject,
   Kysely,
   OperandExpression,
   Selectable,
   SelectQueryBuilder,
   SqlBool,
   Transaction,
+  UpdateObject,
 } from 'kysely';
-import type { InsertObject, UpdateObject } from 'kysely';
 import { FileMigrationProvider, Migrator } from 'kysely/migration';
 import * as path from 'path';
 import type { Except } from 'type-fest';
