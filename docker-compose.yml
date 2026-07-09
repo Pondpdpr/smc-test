@@ -1,0 +1,70 @@
+services:
+  # to test app build (if break in ci, don't need to use locally)
+  # app:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: dockerfile
+  #   ports:
+  #     - '3000:3000'
+  #   environment:
+  #     DATABASE_URL: postgresql://postgres:postgres@postgres:5432/postgres
+  #     REDIS_URL: redis://redis:6379
+  #   working_dir: /usr/src/app
+  #   command: ['start']
+
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: "Asia/Bangkok"
+      PGTZ: "Asia/Bangkok"
+    ports:
+      - 5432:5432
+    volumes:
+      - ./_docker_volumes/postgres:/var/lib/postgresql/data
+
+  mailhog:
+    image: mailhog/mailhog
+    platform: linux/amd64
+    ports:
+      - '1025:1025' # SMTP port
+      - '8025:8025' # Web UI port
+    restart: unless-stopped
+
+  # Enable this to use redis caching
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    depends_on:
+      - postgres
+    volumes:
+      - ./_docker_volumes/redis:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672" # RabbitMQ port
+      - "15672:15672" # Management console port
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes:
+      - ./_docker_volumes/rabbitmq/data:/var/lib/rabbitmq
+      - ./_docker_volumes/rabbitmq/log:/var/log/rabbitmq
+
+  # Enable this to use file uploading to minio
+  # minio:
+  #   image: minio/minio
+  #   environment:
+  #     - MINIO_ROOT_USER=${STORAGE_ACCESS_KEY}
+  #     - MINIO_ROOT_PASSWORD=${STORAGE_SECRET_KEY}
+  #   ports:
+  #     - 9000:9000
+  #     - 9001:9001
+  #   command: minio server --console-address ":9001" /data
+  #   volumes:
+  #     - ./_docker_volumes/minio:/data
