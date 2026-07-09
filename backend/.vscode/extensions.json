@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "rluvaton.vscode-vitest",
+    "YoavBls.pretty-ts-errors",
+    "esbenp.prettier-vscode"
+  ]
+}

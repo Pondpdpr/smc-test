@@ -1,0 +1,71 @@
+meta {
+  name: refresh
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{url}}/v1/auth/refresh
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  bru.setEnvVar('token', res?.body?.data?.token)
+}
+
+docs {
+  Relies on the session_token cookie set by sign-in (Bruno stores it
+  automatically). Requires the x-device header set at the auth folder
+  level to match the device that originally signed in.
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/auth/refresh
+    method: POST
+    mode: none
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      set-cookie: session_token=f7b4e3f53f54519eeac999fd6bfe9831266330c672788d4111230739caa6e171; Max-Age=604800; Path=/; HttpOnly; Secure; SameSite=None
+      content-length: 528
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 201
+      text: Created
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "user": {
+              "attributes": {
+                "id": "019f45ee-1ad8-766d-9a88-9a2c9444c262",
+                "email": "bruno-demo@example.com",
+                "firstName": "bobby",
+                "lastName": "jones",
+                "userStatus": "ACTIVE",
+                "emailVerifiedAt": "2026-07-09T08:12:22.645Z"
+              }
+            },
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXNzYWdlIjp7InVzZXJJZCI6IjAxOWY0NWVlLTFhZDgtNzY2ZC05YTg4LTlhMmM5NDQ0YzI2MiIsImFjY291bnRJZCI6IjAxOWY0NWVlLTFhOGMtNzIwOS1iNDAyLWFiNTc3MjliNGM0NyJ9LCJpYXQiOjE3ODM1ODQ4MjgsImV4cCI6NDkzOTM0NDgyOH0.zdSuenPjgeBwLR25cpITQN-I_Izl9IPXHARTRIEAVvw"
+          }
+        }
+      '''
+    }
+  }
+}

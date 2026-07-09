@@ -1,0 +1,81 @@
+meta {
+  name: verify-email
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{url}}/v1/auth/verify-email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "token": "PASTE_TOKEN_FROM_VERIFICATION_EMAIL"
+  }
+}
+
+docs {
+  Get the token from the verification email: open http://localhost:8025
+  (mailhog) after sign-up or resend-verification, open the latest message
+  to bruno-demo@example.com, and copy the token out of the link's ?token=
+  query param.
+
+  Tokens are single-use (the row is deleted on success) and expire after
+  24 hours (see email-verification-token.constant.ts). Reusing a consumed
+  token, or a made-up one, responds 400 { "key": "invalidOrExpiredToken" }.
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/auth/verify-email
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "token": "96c84fedae5c73c79d8c6888e776c950635cf0fa2f682dfe5c515c938a63fa70"
+      }
+    }
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      content-length: 241
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 201
+      text: Created
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "user": {
+              "attributes": {
+                "id": "019f45ee-1ad8-766d-9a88-9a2c9444c262",
+                "email": "bruno-demo@example.com",
+                "firstName": "bobby",
+                "lastName": "jones",
+                "userStatus": "ACTIVE",
+                "emailVerifiedAt": "2026-07-09T08:12:22.645Z"
+              }
+            }
+          }
+        }
+      '''
+    }
+  }
+}

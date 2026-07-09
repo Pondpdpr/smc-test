@@ -1,0 +1,83 @@
+meta {
+  name: sign-in
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{url}}/v1/auth/sign-in
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "superadmin@example.com",
+    "password": "password"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar('token',res?.body?.data?.token)
+}
+
+docs {
+  Rejected with 403 { "key": "emailNotVerified" } if the account hasn't
+  completed the verify-email flow yet.
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/auth/sign-in
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "username": "superadmin@example.com",
+        "password": "password"
+      }
+    }
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      set-cookie: session_token=15ea7f4b85813b79b14616f7a0cc440f61c2ed906c5f1a3bb845ab3f7a3973a7; Max-Age=604800; Path=/; HttpOnly; Secure; SameSite=None
+      content-length: 538
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 201
+      text: Created
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "user": {
+              "attributes": {
+                "id": "019be136-827e-7c83-a055-f4dc6845e8fb",
+                "email": "superadmin@example.com",
+                "firstName": "superadmin",
+                "lastName": "superadmin",
+                "userStatus": "ACTIVE",
+                "emailVerifiedAt": "2026-07-09T08:17:34.876Z"
+              }
+            },
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXNzYWdlIjp7InVzZXJJZCI6IjAxOWJlMTM2LTgyN2UtN2M4My1hMDU1LWY0ZGM2ODQ1ZThmYiIsImFjY291bnRJZCI6IjAxOWY0NWY0LTIwNDctNzA0OC04NGU4LWRiMzkwMThjYmNiOCJ9LCJpYXQiOjE3ODM1ODUwNjIsImV4cCI6NDkzOTM0NTA2Mn0.4O0GZtuAoyCeLpCYbf0ERhmcHUfCoI995kNsOoJduKI"
+          }
+        }
+      '''
+    }
+  }
+}

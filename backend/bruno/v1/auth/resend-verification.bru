@@ -1,0 +1,69 @@
+meta {
+  name: resend-verification
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{url}}/v1/auth/resend-verification
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "bruno-demo@example.com"
+  }
+}
+
+docs {
+  Always responds with { "sent": true } whether or not the email exists or
+  is already verified - intentional, to avoid leaking account existence to
+  an anonymous caller.
+
+  Check http://localhost:8025 (mailhog) for the actual email.
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/auth/resend-verification
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "email": "bruno-demo@example.com"
+      }
+    }
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      content-length: 46
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 201
+      text: Created
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "sent": true
+          }
+        }
+      '''
+    }
+  }
+}

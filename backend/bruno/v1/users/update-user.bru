@@ -1,0 +1,21 @@
+meta {
+  name: update-user
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{url}}/v1/users/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 019be136-827e-7c83-a055-f4dc6845e8fb
+}
+
+body:json {
+  {
+    "firstName": "robert updated"
+  }
+}

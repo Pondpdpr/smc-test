@@ -1,0 +1,99 @@
+meta {
+  name: sign-up
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{url}}/v1/auth/sign-up
+  body: json
+  auth: inherit
+}
+
+headers {
+  idempotency-key: 019afe47-7e4f-75e8-ad1f-44b2dd50e205
+}
+
+body:json {
+  {
+    "account": {
+      "username": "bruno-demo@example.com",
+      "password": "password"
+    },
+    "user": {
+      "firstName": "bobby",
+      "lastName": "jones"
+    }
+  }
+}
+
+docs {
+  No access token is returned - sign-in is gated on email verification (see
+  sign-in.bru), so registering alone must not hand out a usable session.
+  Check http://localhost:8025 (mailhog) for the verification email, then
+  use verify-email, then sign-in.
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/auth/sign-up
+    method: POST
+    mode: json
+    headers: {
+      idempotency-key: 019afe47-7e4f-75e8-ad1f-44b2dd50e205
+    }
+
+    body:json: {
+      {
+        "account": {
+          "username": "bruno-demo@example.com",
+          "password": "password"
+        },
+        "user": {
+          "firstName": "bobby",
+          "lastName": "jones"
+        }
+      }
+    }
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      content-length: 219
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 201
+      text: Created
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "user": {
+              "attributes": {
+                "id": "019f45ee-1ad8-766d-9a88-9a2c9444c262",
+                "email": "bruno-demo@example.com",
+                "firstName": "bobby",
+                "lastName": "jones",
+                "userStatus": "ACTIVE",
+                "emailVerifiedAt": null
+              }
+            }
+          }
+        }
+      '''
+    }
+  }
+}

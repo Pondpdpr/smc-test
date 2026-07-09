@@ -1,0 +1,6 @@
+{
+  "watch": ["src"],
+  "ext": "ts",
+  "ignore": ["**/*.spec.ts", "dist"],
+  "quiet": true
+}

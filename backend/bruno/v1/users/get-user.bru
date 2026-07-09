@@ -1,0 +1,26 @@
+meta {
+  name: get-user
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{url}}/v1/users/:id?includes=posts,posts.comments
+  body: none
+  auth: inherit
+}
+
+params:query {
+  includes: posts,posts.comments
+}
+
+params:path {
+  id: 019be136-827e-7c83-a055-f4dc6845e8fb
+}
+
+body:json {
+  {
+    "email": "tet@example.com",
+    "password": "password"
+  }
+}
