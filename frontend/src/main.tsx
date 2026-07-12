@@ -6,7 +6,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import { App } from '@/App';
 import { Toaster } from '@/components/ui/sonner';
-import { AuthProvider } from '@/lib/auth-context';
+import { AuthProvider } from '@/shared/lib/auth-context';
 import '@/index.css';
 
 const queryClient = new QueryClient();

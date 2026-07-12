@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import {
+  encoding_for_model,
+  get_encoding,
+  type Tiktoken,
+  type TiktokenModel,
+} from 'tiktoken';
 
 import { ConversationService } from '@/domain/base/conversation/conversation.service';
 import { newConversation } from '@/domain/base/conversation/conversation.util';
@@ -50,6 +56,11 @@ type TokenUsage = { prompt_tokens: number; completion_tokens: number };
 
 @Injectable()
 export class ChatService {
+  // Loading a tokenizer's BPE merge table isn't free, so one is kept alive
+  // per encoding name for the life of the process rather than rebuilt on
+  // every stopped/estimated turn.
+  private _encoderCache = new Map<string, Tiktoken>();
+
   constructor(
     private db: MainDb,
     private openAiService: OpenAiService,
@@ -165,8 +176,8 @@ export class ChatService {
         content += roundContent;
 
         // Aborted mid-stream: we never got the final usage chunk, so
-        // estimate cost from character counts rather than under-billing the
-        // partial response to $0 (S3 requires cost still be deducted).
+        // tokenize locally rather than under-billing the partial response to
+        // $0 (S3 requires cost still be deducted).
         if (!gotUsage) {
           costUsd += this._estimateCost(messages, roundContent);
         }
@@ -335,18 +346,48 @@ export class ChatService {
     );
   }
 
+  // Only used when a stream is aborted (Stop) before OpenAI's final usage
+  // chunk arrives, so there's no real token count to bill from. Tokenizes
+  // the exact prompt sent and the exact partial completion the user
+  // actually received, rather than guessing from character counts - the
+  // completion side in particular is exact, since roundContent is the real
+  // text that was streamed, not an approximation of it.
   private _estimateCost(
     messages: ChatCompletionMessageParam[],
     roundContent: string,
   ): number {
-    const promptChars = messages.reduce(
-      (sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0),
-      0,
-    );
-    // ~4 characters per token is a common rough estimate for English text.
+    const { model } =
+      this.configService.getOrThrow<AppConfig['openai']>('openai');
+    const encoder = this._getEncoder(model);
+
+    const promptText = messages
+      .map((m) => (typeof m.content === 'string' ? m.content : ''))
+      .join('\n');
+
     return this._computeCost({
-      prompt_tokens: Math.ceil(promptChars / 4),
-      completion_tokens: Math.ceil(roundContent.length / 4),
+      prompt_tokens: encoder.encode(promptText).length,
+      completion_tokens: encoder.encode(roundContent).length,
     });
+  }
+
+  private _getEncoder(model: string): Tiktoken {
+    const cached = this._encoderCache.get(model);
+    if (cached) {
+      return cached;
+    }
+
+    // The model name is user-configurable (OPENAI_MODEL) and may not be one
+    // tiktoken recognizes by name (a future/renamed model) - o200k_base is
+    // the encoding gpt-4o/gpt-4o-mini both use, and a reasonable default
+    // otherwise.
+    let encoder: Tiktoken;
+    try {
+      encoder = encoding_for_model(model as TiktokenModel);
+    } catch {
+      encoder = get_encoding('o200k_base');
+    }
+
+    this._encoderCache.set(model, encoder);
+    return encoder;
   }
 }

@@ -81,6 +81,7 @@
     "reflect-metadata": "^0.2.2",
     "remeda": "^2.39.0",
     "rxjs": "^7.8.2",
+    "tiktoken": "^1.0.22",
     "type-fest": "^5.7.0",
     "typesafe-i18n": "^5.27.1",
     "ua-parser-js": "^2.0.10",

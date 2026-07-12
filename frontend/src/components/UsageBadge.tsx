@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import type { Usage } from '@/lib/types';
+import { cn } from '@/shared/lib/utils';
+import type { Usage } from '@/shared/api/chat/chat.type';
 
 function formatUsd(value: number): string {
   if (value < 0.01 && value > 0) {

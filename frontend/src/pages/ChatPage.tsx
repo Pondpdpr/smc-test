@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { MenuIcon, SendIcon, SquareIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { getUsage, stopChat, streamChat } from '@/api/chat';
-import { deleteConversation, getMessages, listConversations } from '@/api/conversations';
+import { streamChat } from '@/shared/api/chat/chat.api';
+import { chatQueryKeys, useStopChatMutation, useUsageQuery } from '@/shared/api/chat/chat.hook';
+import {
+  conversationsQueryKeys,
+  useConversationsQuery,
+  useDeleteConversationMutation,
+  useMessagesQuery,
+} from '@/shared/api/conversations/conversations.hook';
 import { MessageBubble } from '@/components/MessageBubble';
 import { Sidebar } from '@/components/Sidebar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { UsageBadge } from '@/components/UsageBadge';
-import { queryKeys } from '@/lib/query-keys';
-import type { Message, ToolCall } from '@/lib/types';
+import type { Message, ToolCall } from '@/shared/domain/message.domain';
 
 export function ChatPage() {
   const queryClient = useQueryClient();
@@ -32,34 +37,11 @@ export function ChatPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollBottomRef = useRef<HTMLDivElement | null>(null);
 
-  const { data: conversations = [] } = useQuery({
-    queryKey: queryKeys.conversations.list(),
-    queryFn: listConversations,
-  });
-
-  const { data: usage } = useQuery({
-    queryKey: queryKeys.usage(),
-    queryFn: getUsage,
-  });
-
-  const { data: messages = [] } = useQuery({
-    queryKey: queryKeys.conversations.messages(selectedId ?? ''),
-    queryFn: () => getMessages(selectedId!),
-    enabled: !!selectedId,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteConversation,
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversations.list() });
-      if (selectedId === id) {
-        handleNewChat();
-      }
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Could not delete conversation');
-    },
-  });
+  const { data: conversations = [] } = useConversationsQuery();
+  const { data: usage } = useUsageQuery();
+  const { data: messages = [] } = useMessagesQuery(selectedId);
+  const deleteMutation = useDeleteConversationMutation();
+  const stopChatMutation = useStopChatMutation();
 
   useEffect(() => {
     scrollBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -78,14 +60,17 @@ export function ChatPage() {
   async function handleDelete(id: string) {
     try {
       await deleteMutation.mutateAsync(id);
-    } catch {
-      // onError above already surfaced a toast
+      if (selectedId === id) {
+        handleNewChat();
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not delete conversation');
     }
   }
 
   function handleStop() {
     if (selectedId) {
-      stopChat(selectedId).catch(() => {});
+      stopChatMutation.mutate(selectedId);
     }
     abortControllerRef.current?.abort();
   }
@@ -169,15 +154,15 @@ export function ChatPage() {
       // has a chance to flicker away and back.
       if (activeConversationId) {
         queryClient
-          .invalidateQueries({ queryKey: queryKeys.conversations.messages(activeConversationId) })
+          .invalidateQueries({ queryKey: conversationsQueryKeys.messages(activeConversationId) })
           .then(() => setOptimisticUserMessage(null));
         if (wasNewConversation) {
-          queryClient.invalidateQueries({ queryKey: queryKeys.conversations.list() });
+          queryClient.invalidateQueries({ queryKey: conversationsQueryKeys.list() });
         }
       } else {
         setOptimisticUserMessage(null);
       }
-      queryClient.invalidateQueries({ queryKey: queryKeys.usage() });
+      queryClient.invalidateQueries({ queryKey: chatQueryKeys.usage() });
     }
   }
 

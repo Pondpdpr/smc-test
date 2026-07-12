@@ -13,9 +13,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAuth } from '@/lib/auth-context';
-import { cn } from '@/lib/utils';
-import type { Conversation } from '@/lib/types';
+import { useAuth } from '@/shared/lib/auth-context';
+import { cn } from '@/shared/lib/utils';
+import type { Conversation } from '@/shared/domain/conversation.domain';
 
 type SidebarProps = {
   conversations: Conversation[];

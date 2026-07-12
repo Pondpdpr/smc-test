@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import * as authApi from '@/api/auth';
-import { getToken, setToken, USER_STORAGE_KEY } from '@/lib/api-client';
-import type { User } from '@/lib/types';
+import { useSignInMutation, useSignUpMutation } from '@/shared/api/auth/auth.hook';
+import { getToken, setToken, USER_STORAGE_KEY } from '@/shared/lib/api-client';
+import type { User } from '@/shared/domain/user.domain';
 
 type AuthContextValue = {
   user: User | null;
@@ -22,6 +22,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const signInMutation = useSignInMutation();
+  const signUpMutation = useSignUpMutation();
 
   // No "get current user" endpoint exists yet, so the last-known user is
   // cached alongside the token and trusted until a request 401s.
@@ -45,8 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function login(email: string, password: string) {
-    const { user: signedInUser, token } = await authApi.signIn(email, password);
-    persist(signedInUser, token);
+    const { user: signedInUser, token } = (await signInMutation.mutateAsync({ email, password }))
+      .data;
+    persist(signedInUser.attributes, token);
   }
 
   async function register(input: {
@@ -57,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }) {
     // Sign-up deliberately returns no token - verification is required
     // before the account can sign in (see backend sign-in.command.ts).
-    await authApi.signUp(input);
+    await signUpMutation.mutateAsync(input);
   }
 
   function logout() {

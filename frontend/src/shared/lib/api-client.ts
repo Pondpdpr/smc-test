@@ -1,5 +1,7 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 
+import type { IStandardResponse } from './type.http';
+
 const TOKEN_STORAGE_KEY = 'auth.token';
 const DEVICE_STORAGE_KEY = 'auth.deviceId';
 export const USER_STORAGE_KEY = 'auth.user';
@@ -54,10 +56,12 @@ export function handleFatalResponseStatus(status: number): void {
   }
 }
 
-type ApiEnvelope<T> = {
-  success: boolean;
-  key?: string;
-  data?: T;
+// backend's own IStandardResponse/IStandardErrorResonse both type `success`
+// as plain `boolean` (not narrowed per-variant), so they don't form a real
+// discriminated union either - this loosely merges both shapes the same
+// way, success/error fields optional, for the one place that has to
+// branch on which one actually came back.
+type ApiEnvelope<T> = Partial<IStandardResponse<T & Record<string, any>>> & {
   error?: { context?: { message?: string } };
 };
 
@@ -85,14 +89,21 @@ function toApiError(status: number, json: ApiEnvelope<unknown> | null | undefine
   return new ApiError(status, json?.key ?? 'unknown', message);
 }
 
-async function request<T>(path: string, config: AxiosRequestConfig = {}): Promise<T> {
+// Returns the envelope as-is (success/key/data, matching backend's
+// IStandardResponse<D> exactly) instead of unwrapping to just `data` -
+// api.ts functions return what the backend actually sent, callers reach
+// into `.data` themselves.
+async function request<T extends Record<string, any>>(
+  path: string,
+  config: AxiosRequestConfig = {},
+): Promise<IStandardResponse<T>> {
   try {
     const res = await client.request<ApiEnvelope<T>>({ url: path, ...config });
     if (!res.data?.success) {
       handleFatalResponseStatus(res.status);
       throw toApiError(res.status, res.data);
     }
-    return res.data.data as T;
+    return res.data as IStandardResponse<T>;
   } catch (error) {
     if (error instanceof AxiosError) {
       const status = error.response?.status ?? 0;
@@ -104,9 +115,10 @@ async function request<T>(path: string, config: AxiosRequestConfig = {}): Promis
 }
 
 export const api = {
-  get: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: 'GET' }),
-  post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+  get: <T extends Record<string, any>>(path: string, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: 'GET' }),
+  post: <T extends Record<string, any>>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>(path, { ...options, method: 'POST', data: body }),
-  delete: <T>(path: string, options?: RequestOptions) =>
+  delete: <T extends Record<string, any>>(path: string, options?: RequestOptions) =>
     request<T>(path, { ...options, method: 'DELETE' }),
 };

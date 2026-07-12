@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ChevronDownIcon, DatabaseIcon, LoaderCircleIcon } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
-import type { ToolCall } from '@/lib/types';
+import { cn } from '@/shared/lib/utils';
+import type { ToolCall } from '@/shared/domain/message.domain';
 
 function formatCell(value: unknown): string {
   if (value === null || value === undefined) {

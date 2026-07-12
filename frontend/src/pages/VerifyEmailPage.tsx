@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import * as authApi from '@/api/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useResendVerificationMutation, useVerifyEmailMutation } from '@/shared/api/auth/auth.hook';
 
 type Status = 'verifying' | 'verified' | 'failed' | 'idle';
 
@@ -18,7 +18,12 @@ export function VerifyEmailPage() {
 
   const [status, setStatus] = useState<Status>(token ? 'verifying' : 'idle');
   const [email, setEmail] = useState(sentTo ?? resendTo ?? '');
-  const [isResending, setIsResending] = useState(false);
+  // Destructured because `mutate` is the stable piece - the mutation result
+  // object itself is a new reference every render, so depending on that
+  // instead would defeat the hasAttemptedRef guard below by re-running the
+  // effect on unrelated re-renders.
+  const { mutateAsync: verifyEmail } = useVerifyEmailMutation();
+  const resendMutation = useResendVerificationMutation();
 
   // Tokens are single-use, so this call must never run twice for the same
   // token - React 18 StrictMode double-invokes effects in dev, which would
@@ -32,24 +37,25 @@ export function VerifyEmailPage() {
     }
     hasAttemptedRef.current = true;
 
-    authApi
-      .verifyEmail(token)
+    // mutateAsync + .then/.catch, not mutate(token, {onSuccess, onError}) -
+    // the callback-options form of mutate() was observed to silently never
+    // fire its callbacks when called from inside this effect (reproduced
+    // live: the network request completed successfully but neither
+    // onSuccess nor onError ran, leaving the page stuck on "Confirming...").
+    verifyEmail(token)
       .then(() => setStatus('verified'))
       .catch(() => setStatus('failed'));
-  }, [token]);
+  }, [token, verifyEmail]);
 
   async function handleResend() {
     if (!email) {
       return;
     }
-    setIsResending(true);
     try {
-      await authApi.resendVerification(email);
+      await resendMutation.mutateAsync(email);
       toast.success('If that email exists, a new verification link is on its way.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not resend the email');
-    } finally {
-      setIsResending(false);
     }
   }
 
@@ -91,8 +97,8 @@ export function VerifyEmailPage() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
-              <Button onClick={handleResend} disabled={isResending || !email}>
-                {isResending ? 'Sending…' : 'Resend verification email'}
+              <Button onClick={handleResend} disabled={resendMutation.isPending || !email}>
+                {resendMutation.isPending ? 'Sending…' : 'Resend verification email'}
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 <Link to="/login" className="font-medium text-foreground underline underline-offset-4">

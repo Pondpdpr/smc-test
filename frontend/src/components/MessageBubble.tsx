@@ -2,8 +2,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { ToolCallCard } from '@/components/ToolCallCard';
-import { cn } from '@/lib/utils';
-import type { ToolCall } from '@/lib/types';
+import { cn } from '@/shared/lib/utils';
+import type { ToolCall } from '@/shared/domain/message.domain';
 
 type MessageBubbleProps = {
   role: 'user' | 'assistant';

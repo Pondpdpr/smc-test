@@ -1,18 +1,14 @@
-import { api, getDeviceId, getToken, handleFatalResponseStatus } from '@/lib/api-client';
-import { apiPaths } from '@/lib/api-paths';
-import type { Usage } from '@/lib/types';
+import { api, getDeviceId, getToken, handleFatalResponseStatus } from '@/shared/lib/api-client';
+import { apiPaths } from '@/shared/lib/api-paths';
+import type { IStandardResponse } from '@/shared/lib/type.http';
 
-export type ChatStreamEvent =
-  | { event: 'conversation'; data: { conversationId: string } }
-  | { event: 'tool_call'; data: { sql: string } }
-  | { event: 'tool_result'; data: { rowCount: number; rows: Record<string, unknown>[] } }
-  | { event: 'token'; data: { delta: string } }
-  | { event: 'done'; data: { messageId: string; stopped: boolean; costUsd: number } }
-  | { event: 'error'; data: { message: string } };
+import type { ChatStreamEvent, StopChatResult, Usage } from './chat.type';
 
 // Native EventSource can't POST a body, so the SSE stream is parsed by hand
 // off a fetch() ReadableStream instead. This is also what makes client-side
 // Stop possible: aborting the fetch (via `signal`) tears down the connection.
+// No hook wraps this - streaming doesn't fit useQuery/useMutation's single
+// request/response model, so it's called directly from ChatPage.
 export async function streamChat(
   params: { conversationId?: string; message: string },
   onEvent: (event: ChatStreamEvent) => void,
@@ -95,10 +91,10 @@ function parseSseEvent(raw: string): ChatStreamEvent | null {
   }
 }
 
-export async function stopChat(conversationId: string) {
-  await api.post(apiPaths.chat.stop(conversationId));
+export async function stopChat(conversationId: string): Promise<IStandardResponse<StopChatResult>> {
+  return api.post<StopChatResult>(apiPaths.chat.stop(conversationId));
 }
 
-export async function getUsage() {
+export async function getUsage(): Promise<IStandardResponse<Usage>> {
   return api.get<Usage>(apiPaths.chat.usage);
 }
