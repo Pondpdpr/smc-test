@@ -15,7 +15,7 @@ export const financialQueryTool: ChatCompletionTool = {
   function: {
     name: FINANCIAL_QUERY_TOOL_NAME,
     description:
-      'Query revenue and income data for US public companies. Covers exactly 48 companies, 2022-2025. If a requested company/year/sector is outside that coverage, this returns zero rows - that means the data is not available and must be reported as such, never estimated or guessed.',
+      'Query revenue and income data for US public companies. Covers exactly 48 companies, 2022-2025. If a requested company/year/sector is outside that coverage, this returns zero rows - that means the data is not available and must be reported as such, never estimated or guessed. To rank or compare ACROSS companies (e.g. "which company had the biggest growth"), omit the companies filter to get the full dataset - do not call this once per company you already know the name of, since that silently excludes the rest of the dataset from the comparison.',
     parameters: {
       type: 'object',
       properties: {
@@ -23,7 +23,7 @@ export const financialQueryTool: ChatCompletionTool = {
           type: 'array',
           items: { type: 'string' },
           description:
-            'Company names or ticker symbols, e.g. ["Apple", "AAPL", "Bank of America"]. Matching is fuzzy (case/punctuation-insensitive). Omit to not filter by company.',
+            'Company names or ticker symbols, e.g. ["Apple", "AAPL", "Bank of America"]. Matching is fuzzy (case/punctuation-insensitive). Omit entirely (do not guess a shortlist) when the question compares/ranks across companies - only set this when the user named specific companies.',
         },
         years: {
           type: 'array',

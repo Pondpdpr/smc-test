@@ -10,6 +10,8 @@ import {
 import type { FastifyReply } from 'fastify';
 
 import { ChatService } from '@/domain/logic/chat/chat.service';
+import { ChatStopService } from '@/domain/logic/chat/chat-stop.service';
+import { LoggerService } from '@/infra/global/logger/logger.service';
 import { UserClaims } from '@/infra/middleware/jwt/jwt.common';
 
 import { GetUsageResponse } from './get-usage/get-usage.dto';
@@ -18,8 +20,17 @@ import { StopChatCommand } from './stop-chat/stop-chat.command';
 import { StopChatResponse } from './stop-chat/stop-chat.dto';
 import { StreamChatDto } from './stream-chat/stream-chat.dto';
 
+// Safe to call after headers are sent - a destroyed/closed socket makes
+// .write() a no-op-ish throw, which we don't want taking down the process.
 function writeSseEvent(reply: FastifyReply, event: string, data: unknown) {
-  reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  if (reply.raw.destroyed || reply.raw.writableEnded) {
+    return;
+  }
+  try {
+    reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  } catch {
+    // Client disconnected between the destroyed-check and the write - ignore.
+  }
 }
 
 @Controller({ path: 'chat', version: '1' })
@@ -28,6 +39,8 @@ export class ChatV1Controller {
     private chatService: ChatService,
     private getUsageQuery: GetUsageQuery,
     private stopChatCommand: StopChatCommand,
+    private chatStopService: ChatStopService,
+    private loggerService: LoggerService,
   ) {}
 
   // SSE, so this one doesn't follow the usual command/query-returns-JSON
@@ -35,6 +48,12 @@ export class ChatV1Controller {
   // and the user-message write happen in prepareTurn() BEFORE we touch the
   // raw response, so a bad request (404/429) still comes back as a normal
   // JSON error rather than a half-opened stream.
+  //
+  // Everything AFTER writeHead() is wrapped in try/catch/finally and never
+  // rethrows: once raw headers are sent, Nest's default exception handling
+  // would try reply.send() on an error, which crashes the whole process with
+  // ERR_HTTP_HEADERS_SENT (this happened in practice - a disconnecting
+  // client mid-stream threw past an unguarded loop).
   @Post('stream')
   async stream(
     @UserClaims() claims: UserClaims,
@@ -60,16 +79,42 @@ export class ChatV1Controller {
       'X-Accel-Buffering': 'no',
     });
 
-    writeSseEvent(reply, 'conversation', { conversationId });
+    let finished = false;
 
-    for await (const chatEvent of this.chatService.streamAssistantReply(
-      claims.userId,
-      conversationId,
-    )) {
-      writeSseEvent(reply, chatEvent.event, chatEvent.data);
+    // If the client disconnects (tab closed, Stop button aborts the fetch),
+    // treat it the same as an explicit stop so we don't keep burning OpenAI
+    // calls against a dead socket.
+    reply.raw.on('close', () => {
+      if (!finished) {
+        this.chatStopService.requestStop(conversationId).catch(() => {});
+      }
+    });
+
+    try {
+      writeSseEvent(reply, 'conversation', { conversationId });
+
+      for await (const chatEvent of this.chatService.streamAssistantReply(
+        claims.userId,
+        conversationId,
+      )) {
+        if (reply.raw.destroyed || reply.raw.writableEnded) {
+          break;
+        }
+        writeSseEvent(reply, chatEvent.event, chatEvent.data);
+      }
+    } catch (error) {
+      // Last-resort safety net - chat.service.ts already catches its own
+      // errors and yields an 'error' event, so reaching here means
+      // something failed outside that (e.g. the write itself).
+      this.loggerService.error(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    } finally {
+      finished = true;
+      if (!reply.raw.destroyed && !reply.raw.writableEnded) {
+        reply.raw.end();
+      }
     }
-
-    reply.raw.end();
   }
 
   @Post('stop/:conversationId')

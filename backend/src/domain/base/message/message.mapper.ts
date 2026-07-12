@@ -1,4 +1,3 @@
-import type { JsonValue } from '@/infra/db/db';
 import {
   $pgState,
   getPgState,
@@ -48,7 +47,10 @@ export function messageToPg(data: Message): MessagePg {
     conversation_id: data.conversationId,
     role: data.role,
     content: data.content,
-    tool_call: data.toolCalls as JsonValue | null,
+    // node-postgres serializes plain JS objects to JSON automatically, but
+    // a raw JS array is sent using Postgres's native array-literal syntax
+    // instead - invalid for a jsonb column. Must stringify arrays by hand.
+    tool_call: data.toolCalls ? JSON.stringify(data.toolCalls) : null,
     stopped: data.stopped,
     cost_usd_micros: data.costUsdMicros,
     created_at: data.createdAt.toISOString(),

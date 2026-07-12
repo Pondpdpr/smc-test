@@ -108,10 +108,17 @@ export class ChatService {
       for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
         const isLastAllowedRound = round === MAX_TOOL_CALL_ROUNDS - 1;
         const tools = isLastAllowedRound ? [] : [financialQueryTool];
+        // Forced (not 'auto') on the first round: this app only exists to
+        // answer from financial_data, so every user turn re-queries rather
+        // than letting the model "recall" a figure it saw earlier in the
+        // conversation history - verified live that 'auto' skips the tool
+        // on follow-up questions once a number is already in context.
+        const toolChoice = round === 0 ? ('required' as const) : undefined;
 
         const stream = await this.openAiService.streamChatCompletion(
           messages,
           tools,
+          toolChoice,
         );
 
         const toolCallBuffers = new Map<number, ToolCallBuffer>();

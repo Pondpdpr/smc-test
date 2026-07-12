@@ -24,7 +24,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./_docker_volumes/postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
   mailhog:
     image: mailhog/mailhog
@@ -42,7 +42,7 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ./_docker_volumes/redis:/data
+      - redis_data:/data
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -53,8 +53,8 @@ services:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin
     volumes:
-      - ./_docker_volumes/rabbitmq/data:/var/lib/rabbitmq
-      - ./_docker_volumes/rabbitmq/log:/var/log/rabbitmq
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
 
   # Enable this to use file uploading to minio
   # minio:
@@ -68,3 +68,15 @@ services:
   #   command: minio server --console-address ":9001" /data
   #   volumes:
   #     - ./_docker_volumes/minio:/data
+
+# Named volumes (not host bind mounts) - on Docker Desktop/WSL2, bind-mounting
+# a WSL-distro path into the Docker Desktop VM goes through a cross-distro
+# passthrough that can race on host reboot: if Docker's VM starts before the
+# dev distro's filesystem is attached, the bind source looks empty and
+# postgres/rabbitmq silently reinitialize from scratch. Named volumes live
+# inside the Docker Desktop VM's own disk, so they don't depend on that race.
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  rabbitmq_log:

@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import type {
   ChatCompletionMessageParam,
   ChatCompletionTool,
+  ChatCompletionToolChoiceOption,
 } from 'openai/resources/chat/completions';
 
 import type { AppConfig } from '@/infra/config';
@@ -25,6 +26,7 @@ export class OpenAiService {
   streamChatCompletion(
     messages: ChatCompletionMessageParam[],
     tools: ChatCompletionTool[],
+    toolChoice?: ChatCompletionToolChoiceOption,
   ) {
     const { model } =
       this.configService.getOrThrow<AppConfig['openai']>('openai');
@@ -33,6 +35,7 @@ export class OpenAiService {
       model,
       messages,
       tools,
+      tool_choice: toolChoice,
       stream: true,
       // Needed to get prompt/completion token counts on the final chunk,
       // which is how chat.service.ts computes cost_usd_micros.
