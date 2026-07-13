@@ -16,7 +16,7 @@ export function useUsageQuery() {
     // Otherwise the badge only updates after a chat turn or a tab refocus -
     // someone sitting on the page waiting out their reset would see stale
     // spend/limit numbers indefinitely.
-    refetchInterval: 30_000,
+    refetchInterval: 10_000,
   });
 }
 
