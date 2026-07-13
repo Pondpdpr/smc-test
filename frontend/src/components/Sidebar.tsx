@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { LogOutIcon, MessageSquarePlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 
 import {
@@ -22,9 +21,13 @@ type SidebarProps = {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNewChat: () => void;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (id: string) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  pendingDeleteId: string | null;
+  onCancelDelete: () => void;
+  onConfirmDelete: () => void;
+  isDeleting: boolean;
 };
 
 export function Sidebar({
@@ -35,23 +38,12 @@ export function Sidebar({
   onDelete,
   open,
   onOpenChange,
+  pendingDeleteId,
+  onCancelDelete,
+  onConfirmDelete,
+  isDeleting,
 }: SidebarProps) {
   const { user, logout } = useAuth();
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  async function confirmDelete() {
-    if (!pendingDeleteId) {
-      return;
-    }
-    setIsDeleting(true);
-    try {
-      await onDelete(pendingDeleteId);
-    } finally {
-      setIsDeleting(false);
-      setPendingDeleteId(null);
-    }
-  }
 
   return (
     <>
@@ -73,10 +65,7 @@ export function Sidebar({
       >
         <div className="flex items-center gap-2 p-3">
           <Button
-            onClick={() => {
-              onNewChat();
-              onOpenChange(false);
-            }}
+            onClick={onNewChat}
             variant="outline"
             className="min-w-0 flex-1 justify-start gap-2"
           >
@@ -105,10 +94,7 @@ export function Sidebar({
               <div key={conversation.id} className="group relative">
                 <button
                   type="button"
-                  onClick={() => {
-                    onSelect(conversation.id);
-                    onOpenChange(false);
-                  }}
+                  onClick={() => onSelect(conversation.id)}
                   className={cn(
                     'w-full truncate rounded-md px-3 py-2 pr-8 text-left text-sm hover:bg-accent',
                     selectedId === conversation.id && 'bg-accent font-medium',
@@ -119,7 +105,7 @@ export function Sidebar({
                 <button
                   type="button"
                   aria-label="Delete conversation"
-                  onClick={() => setPendingDeleteId(conversation.id)}
+                  onClick={() => onDelete(conversation.id)}
                   className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground opacity-100 hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:group-hover:opacity-100"
                 >
                   <Trash2Icon className="size-3.5" />
@@ -137,7 +123,7 @@ export function Sidebar({
         </div>
       </aside>
 
-      <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(nextOpen) => !nextOpen && onCancelDelete()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this conversation?</AlertDialogTitle>
@@ -148,7 +134,7 @@ export function Sidebar({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={onConfirmDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

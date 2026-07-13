@@ -6,6 +6,7 @@ export const apiPaths = {
     signUp: '/v1/auth/sign-up',
     verifyEmail: '/v1/auth/verify-email',
     resendVerification: '/v1/auth/resend-verification',
+    refresh: '/v1/auth/refresh',
   },
   conversations: {
     list: '/v1/conversations',

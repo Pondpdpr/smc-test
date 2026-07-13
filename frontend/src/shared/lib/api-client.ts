@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 
+import { apiPaths } from './api-paths';
 import type { IStandardResponse } from './type.http';
 
 const TOKEN_STORAGE_KEY = 'auth.token';
@@ -41,10 +42,9 @@ export function getDeviceId(): string {
   return deviceId;
 }
 
-// 401 = every auth failure this backend produces (expired/invalid/missing
-// token - see jwt.guard.ts and common.crypto.ts, there's no other 401 usage).
-// Not recoverable by the current page, so every call site funnels through
-// this instead of handling it locally.
+// 401 = every auth failure this backend produces. Only reached after the
+// response interceptor below already tried refreshAccessToken() and
+// failed - this is the final fallback, not the first reaction to a 401.
 export function handleFatalResponseStatus(status: number): void {
   if (status !== 401) {
     return;
@@ -56,11 +56,8 @@ export function handleFatalResponseStatus(status: number): void {
   }
 }
 
-// backend's own IStandardResponse/IStandardErrorResonse both type `success`
-// as plain `boolean` (not narrowed per-variant), so they don't form a real
-// discriminated union either - this loosely merges both shapes the same
-// way, success/error fields optional, for the one place that has to
-// branch on which one actually came back.
+// Loosely typed: backend's success/error shapes both use plain `boolean`
+// for `success`, so they aren't a real discriminated union either.
 type ApiEnvelope<T> = Partial<IStandardResponse<T & Record<string, any>>> & {
   error?: { context?: { message?: string } };
 };
@@ -71,10 +68,8 @@ const client = axios.create({
   withCredentials: true, // carries the refresh-token cookie
 });
 
-// Content-Type is left for axios to set itself - it only adds
-// application/json when there's an actual `data` payload, which is what
-// fetch required doing by hand (Fastify's JSON body parser rejects an empty
-// body if the header is present with no body, breaking DELETE/GET).
+// Axios only sets Content-Type when there's a `data` payload, avoiding the
+// empty-body-with-header issue Fastify's parser rejects on DELETE/GET.
 client.interceptors.request.use((config) => {
   config.headers.set('x-device', getDeviceId());
   const token = getToken();
@@ -84,15 +79,63 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
+// Shared so concurrent 401s trigger one /refresh call, not one per request.
+let refreshPromise: Promise<boolean> | null = null;
+
+// Plain axios, not `client` - avoids recursing into the response
+// interceptor below if refresh itself 401s.
+export function refreshAccessToken(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post<IStandardResponse<{ token: string }>>(apiPaths.auth.refresh, undefined, {
+        withCredentials: true,
+        headers: { 'x-device': getDeviceId() },
+      })
+      .then((res) => {
+        const token = res.data?.data?.token;
+        if (!token) {
+          return false;
+        }
+        setToken(token);
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
+type RetryableConfig = AxiosRequestConfig & { _retried?: boolean };
+
+// On 401, try the refresh cookie once before giving up - the JWT lasts 1h,
+// the refresh cookie 7 days, so most 401s mid-session are recoverable.
+client.interceptors.response.use(
+  (res) => res,
+  async (error: AxiosError) => {
+    const config = error.config as RetryableConfig | undefined;
+    const isRefreshCall = config?.url === apiPaths.auth.refresh;
+
+    if (error.response?.status === 401 && config && !config._retried && !isRefreshCall) {
+      config._retried = true;
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return client.request(config);
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);
+
 function toApiError(status: number, json: ApiEnvelope<unknown> | null | undefined): ApiError {
   const message = json?.error?.context?.message ?? json?.key ?? `Request failed (${status})`;
   return new ApiError(status, json?.key ?? 'unknown', message);
 }
 
-// Returns the envelope as-is (success/key/data, matching backend's
-// IStandardResponse<D> exactly) instead of unwrapping to just `data` -
-// api.ts functions return what the backend actually sent, callers reach
-// into `.data` themselves.
+// Returns the envelope as-is, matching backend's IStandardResponse<D> -
+// callers unwrap `.data` themselves.
 async function request<T extends Record<string, any>>(
   path: string,
   config: AxiosRequestConfig = {},

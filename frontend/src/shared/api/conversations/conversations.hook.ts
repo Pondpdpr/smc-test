@@ -2,9 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { deleteConversation, getMessages, listConversations } from './conversations.api';
 
-// Key factory so invalidation call sites reference the same hierarchy the
-// queries were registered under (e.g. invalidating all() also invalidates
-// list()).
+// Key factory so invalidating all() also invalidates list().
 export const conversationsQueryKeys = {
   all: () => ['conversations'] as const,
   list: () => [...conversationsQueryKeys.all(), 'list'] as const,
@@ -12,10 +10,7 @@ export const conversationsQueryKeys = {
     [...conversationsQueryKeys.all(), conversationId, 'messages'] as const,
 };
 
-// api.ts returns the full IStandardResponse envelope untouched (success/key/
-// data, IResponse<T>[] wrappers and all) - `select` is where that gets
-// flattened to what the UI actually wants, keeping the api layer a pure
-// "call it, return what came back" boundary.
+// api.ts returns the raw envelope - `select` flattens it to what the UI wants.
 export function useConversationsQuery() {
   return useQuery({
     queryKey: conversationsQueryKeys.list(),
@@ -33,9 +28,7 @@ export function useMessagesQuery(conversationId: string | null) {
   });
 }
 
-// Cache invalidation lives here (the query-cache mechanics), not in the
-// component - callers still get mutateAsync's promise to layer their own
-// UX (toasts, clearing local state) on top via the call site.
+// Cache invalidation lives here; callers layer their own UX via mutateAsync's promise.
 export function useDeleteConversationMutation() {
   const queryClient = useQueryClient();
   return useMutation({

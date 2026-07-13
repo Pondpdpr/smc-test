@@ -1,34 +1,14 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/shared/lib/auth-context';
+
+import { useRegister } from './use-register';
 
 export function RegisterPage() {
-  const { register } = useAuth();
-  const navigate = useNavigate();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await register({ email, password, firstName, lastName });
-      navigate(`/verify-email?sent=${encodeURIComponent(email)}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Registration failed');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  const register = useRegister();
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
@@ -38,15 +18,15 @@ export function RegisterPage() {
           <CardDescription>We&apos;ll email you a link to verify your address.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={register.handleSubmit} className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="firstName">First name</Label>
                 <Input
                   id="firstName"
                   required
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  value={register.firstName}
+                  onChange={(e) => register.setFirstName(e.target.value)}
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -54,8 +34,8 @@ export function RegisterPage() {
                 <Input
                   id="lastName"
                   required
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  value={register.lastName}
+                  onChange={(e) => register.setLastName(e.target.value)}
                 />
               </div>
             </div>
@@ -66,8 +46,8 @@ export function RegisterPage() {
                 type="email"
                 autoComplete="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={register.email}
+                onChange={(e) => register.setEmail(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -78,12 +58,12 @@ export function RegisterPage() {
                 autoComplete="new-password"
                 required
                 minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={register.password}
+                onChange={(e) => register.setPassword(e.target.value)}
               />
             </div>
-            <Button type="submit" disabled={isSubmitting} className="mt-2">
-              {isSubmitting ? 'Creating account…' : 'Create account'}
+            <Button type="submit" disabled={register.isSubmitting} className="mt-2">
+              {register.isSubmitting ? 'Creating account…' : 'Create account'}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
