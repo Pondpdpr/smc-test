@@ -35,6 +35,24 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
     scrollBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingText, streamingToolCalls, pendingToolSql]);
 
+  // For a brand-new conversation, useMessagesQuery goes from disabled to
+  // enabled mid-turn (as soon as the id is known), and the backend already
+  // persisted the user message before streaming even started - so the
+  // fetch that enabling triggers can surface it while the optimistic copy
+  // is still showing too, duplicating the bubble for a few seconds until
+  // the slower post-turn invalidation below catches up. Clearing as soon
+  // as the real list's tail matches closes that window immediately instead
+  // of waiting for the whole turn to finish.
+  useEffect(() => {
+    if (!optimisticUserMessage) {
+      return;
+    }
+    const last = messages[messages.length - 1];
+    if (last?.role === 'user' && last.content === optimisticUserMessage.content) {
+      setOptimisticUserMessage(null);
+    }
+  }, [messages, optimisticUserMessage]);
+
   // Called when the page switches conversations - clears the previous
   // one's in-flight bubble, which has no other trigger to disappear.
   function resetTurn() {
