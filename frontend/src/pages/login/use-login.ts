@@ -26,6 +26,11 @@ export function useLogin() {
             onClick: () => navigate(`/verify-email?resend=${encodeURIComponent(email)}`),
           },
         });
+      } else if (
+        error instanceof ApiError &&
+        (error.key === 'usersNotFound' || error.key === 'invalidAuth')
+      ) {
+        toast.error('Incorrect email or password.');
       } else {
         toast.error(error instanceof Error ? error.message : 'Sign in failed');
       }

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { ApiError } from '@/shared/lib/api-client';
 import { useAuth } from '@/shared/lib/auth-context';
 
 export function useRegister() {
@@ -20,7 +21,16 @@ export function useRegister() {
       await register({ email, password, firstName, lastName });
       navigate(`/verify-email?sent=${encodeURIComponent(email)}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Registration failed');
+      if (error instanceof ApiError && error.key === 'usernameExists') {
+        toast.error('An account with this email already exists.', {
+          action: {
+            label: 'Sign in',
+            onClick: () => navigate('/login'),
+          },
+        });
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Registration failed');
+      }
     } finally {
       setIsSubmitting(false);
     }
