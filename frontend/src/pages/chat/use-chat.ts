@@ -17,8 +17,7 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
 
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  // Not in the query cache - shown until the post-turn invalidation below
-  // resolves, so it never disappears then reappears.
+  // Not in the query cache - shown until the post-turn invalidation clears it, so it never flickers.
   const [optimisticUserMessage, setOptimisticUserMessage] = useState<Message | null>(null);
   const [streamingText, setStreamingText] = useState('');
   const [streamingToolCalls, setStreamingToolCalls] = useState<ToolCall[]>([]);
@@ -26,6 +25,10 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollBottomRef = useRef<HTMLDivElement | null>(null);
+  // Which conversation the in-flight stream belongs to - isStreaming/streamingText are
+  // plain state, not conversation-scoped, so this stops a background reply from
+  // rendering under whatever conversation is now selected.
+  const streamingConversationIdRef = useRef<string | null>(null);
 
   const { data: messages = [] } = useMessagesQuery(conversationId);
   const { data: usage } = useUsageQuery();
@@ -35,14 +38,9 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
     scrollBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingText, streamingToolCalls, pendingToolSql]);
 
-  // For a brand-new conversation, useMessagesQuery goes from disabled to
-  // enabled mid-turn (as soon as the id is known), and the backend already
-  // persisted the user message before streaming even started - so the
-  // fetch that enabling triggers can surface it while the optimistic copy
-  // is still showing too, duplicating the bubble for a few seconds until
-  // the slower post-turn invalidation below catches up. Clearing as soon
-  // as the real list's tail matches closes that window immediately instead
-  // of waiting for the whole turn to finish.
+  // For a new conversation, useMessagesQuery flips on mid-turn and can fetch the
+  // already-persisted user message while the optimistic copy is still showing,
+  // duplicating the bubble - clear it as soon as the real list's tail matches.
   useEffect(() => {
     if (!optimisticUserMessage) {
       return;
@@ -53,15 +51,16 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
     }
   }, [messages, optimisticUserMessage]);
 
-  // Called when the page switches conversations - clears the previous
-  // one's in-flight bubble, which has no other trigger to disappear.
+  // Called on conversation switch - clears the previous optimistic bubble, which has no other trigger to disappear.
   function resetTurn() {
     setOptimisticUserMessage(null);
   }
 
   function stop() {
-    if (conversationId) {
-      stopChatMutation.mutate(conversationId);
+    // Targets whichever conversation is actually generating, not the one currently selected - they can differ.
+    const targetId = streamingConversationIdRef.current;
+    if (targetId) {
+      stopChatMutation.mutate(targetId);
     }
     abortControllerRef.current?.abort();
   }
@@ -69,7 +68,14 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
   async function sendMessage(e: FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || isStreaming) {
+    if (!text) {
+      return;
+    }
+    if (isStreaming) {
+      // Only one turn can run at a time - if it belongs to another conversation, say so instead of silently no-oping.
+      if (streamingConversationIdRef.current !== conversationId) {
+        toast.error("Still replying in another conversation - wait for it to finish first.");
+      }
       return;
     }
 
@@ -89,6 +95,7 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    streamingConversationIdRef.current = conversationId;
 
     let activeConversationId = conversationId ?? undefined;
     let pendingSql: string | null = null;
@@ -101,7 +108,12 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
           switch (event.event) {
             case 'conversation':
               activeConversationId = event.data.conversationId;
+              streamingConversationIdRef.current = event.data.conversationId;
               onConversationCreated(event.data.conversationId);
+              // Sidebar list has never seen this id - refresh now or the generating-indicator won't appear until the turn finishes.
+              if (wasNewConversation) {
+                queryClient.invalidateQueries({ queryKey: conversationsQueryKeys.list() });
+              }
               break;
             case 'tool_call':
               pendingSql = event.data.sql;
@@ -143,10 +155,10 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
       setStreamingToolCalls([]);
       setPendingToolSql(null);
       abortControllerRef.current = null;
+      streamingConversationIdRef.current = null;
 
-      // Re-fetch rather than trust local streamed state, so partial/
-      // stopped/errored turns match what's persisted. Clear the optimistic
-      // bubble only once that lands, to avoid a flicker.
+      // Re-fetch rather than trust local streamed state, so partial/stopped/errored turns match
+      // what's persisted; clear the optimistic bubble only once that lands, to avoid a flicker.
       if (activeConversationId) {
         queryClient
           .invalidateQueries({ queryKey: conversationsQueryKeys.messages(activeConversationId) })
@@ -168,18 +180,28 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
     }
   }
 
-  const hasContent = messages.length > 0 || isStreaming || !!optimisticUserMessage;
+  // Gated to the viewed conversation - raw isStreaming is true app-wide during any turn,
+  // but content must only show under its own conversation.
+  const isStreamingHere = isStreaming && streamingConversationIdRef.current === conversationId;
+  const hasContent = messages.length > 0 || isStreamingHere || !!optimisticUserMessage;
+  // Only one conversation can generate at a time, so its id alone drives the sidebar
+  // indicator - read at render time, not stored in its own state.
+  const generatingConversationId = isStreaming ? streamingConversationIdRef.current : null;
 
   return {
     messages,
     usage,
     input,
     setInput,
+    generatingConversationId,
+    // Drives the composer's disabled/Stop-vs-Send state - intentionally raw/ungated, since
+    // only one turn can run at a time regardless of which conversation is viewed.
     isStreaming,
     optimisticUserMessage,
-    streamingText,
-    streamingToolCalls,
-    pendingToolSql,
+    streamingText: isStreamingHere ? streamingText : '',
+    streamingToolCalls: isStreamingHere ? streamingToolCalls : [],
+    pendingToolSql: isStreamingHere ? pendingToolSql : null,
+    isStreamingHere,
     hasContent,
     sendMessage,
     stop,

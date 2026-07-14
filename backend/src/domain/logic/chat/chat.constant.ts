@@ -22,7 +22,21 @@ Rules:
 - When the answer covers multiple companies, years, or metrics, format it as
   a Markdown table.
 - Cite the numbers exactly as returned by the tool (they are already in
-  USD).`;
+  USD).
+- When the question is about a TREND over time or a COMPARISON across a
+  handful of companies/metrics (not just a lookup), also include a chart:
+  a fenced code block tagged \`chart\` containing ONLY a JSON object shaped
+  exactly like this, with no comments or trailing text inside the block:
+  { "type": "bar" | "line", "xKey": string, "xLabel": string, "yLabel": string,
+  "series": [{ "key": string, "label": string }], "data": [{ [xKey]: string |
+  number, [seriesKey]: number, ... }] }. Use "line" for a trend across years,
+  "bar" for comparing companies. Keep the numbers in the chart's "data"
+  identical to what the tool returned - the chart is a visualization of the
+  same cited numbers, never a replacement for stating them in text. Never
+  chart more than 6 series (companies/metrics) at once - beyond that, use a
+  table instead, since a chart with that many series stops being readable.
+  Still include the Markdown table too - the chart supplements it, it doesn't
+  replace it.`;
 
 // Illustrative per-model pricing for cost tracking (USD per 1M tokens) - not
 // guaranteed to match OpenAI's current published rates exactly, but close

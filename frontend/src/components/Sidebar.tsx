@@ -1,4 +1,4 @@
-import { LogOutIcon, MessageSquarePlusIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { Loader2Icon, LogOutIcon, MessageSquarePlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -28,6 +28,7 @@ type SidebarProps = {
   onCancelDelete: () => void;
   onConfirmDelete: () => void;
   isDeleting: boolean;
+  generatingConversationId: string | null;
 };
 
 export function Sidebar({
@@ -42,6 +43,7 @@ export function Sidebar({
   onCancelDelete,
   onConfirmDelete,
   isDeleting,
+  generatingConversationId,
 }: SidebarProps) {
   const { user, logout } = useAuth();
 
@@ -96,11 +98,17 @@ export function Sidebar({
                   type="button"
                   onClick={() => onSelect(conversation.id)}
                   className={cn(
-                    'w-full truncate rounded-md px-3 py-2 pr-8 text-left text-sm hover:bg-accent',
+                    'flex w-full items-center gap-1.5 truncate rounded-md px-3 py-2 pr-8 text-left text-sm hover:bg-accent',
                     selectedId === conversation.id && 'bg-accent font-medium',
                   )}
                 >
-                  {conversation.title}
+                  {conversation.id === generatingConversationId && (
+                    <Loader2Icon
+                      className="size-3.5 shrink-0 animate-spin text-muted-foreground"
+                      aria-label="Generating"
+                    />
+                  )}
+                  <span className="truncate">{conversation.title}</span>
                 </button>
                 <button
                   type="button"

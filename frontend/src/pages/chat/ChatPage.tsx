@@ -39,6 +39,7 @@ export function ChatPage() {
         onCancelDelete={sidebar.cancelDelete}
         onConfirmDelete={sidebar.confirmDelete}
         isDeleting={sidebar.isDeleting}
+        generatingConversationId={chat.generatingConversationId}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -94,7 +95,7 @@ export function ChatPage() {
               />
             )}
 
-            {chat.isStreaming && (
+            {chat.isStreamingHere && (
               <MessageBubble
                 role="assistant"
                 content={chat.streamingText}

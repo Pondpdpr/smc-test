@@ -1,9 +1,58 @@
-import ReactMarkdown from 'react-markdown';
+import { isValidElement, useMemo } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import {
+  FinancialChart,
+  isChartDataGrounded,
+  normalizeChartSpec,
+  type ChartSpec,
+} from '@/components/FinancialChart';
 import { ToolCallCard } from '@/components/ToolCallCard';
 import { cn } from '@/shared/lib/utils';
 import type { ToolCall } from '@/shared/domain/message.domain';
+
+// Intercepts ```chart fenced code blocks (see chat.constant.ts's SYSTEM_PROMPT)
+// and renders them as a chart; renders nothing if malformed or ungrounded.
+function buildMarkdownComponents(validNumbers: Set<number>): Components {
+  return {
+    code({ className, children, ...props }) {
+      if (className?.includes('language-chart')) {
+        const raw = String(children).replace(/\n$/, '');
+        try {
+          const parsed = JSON.parse(raw) as ChartSpec;
+          if (parsed && Array.isArray(parsed.series) && Array.isArray(parsed.data)) {
+            const spec = normalizeChartSpec(parsed);
+            if (spec && isChartDataGrounded(spec, validNumbers)) {
+              return <FinancialChart spec={spec} />;
+            }
+          }
+          return null;
+        } catch {
+          // malformed JSON - fall through to the default code block below
+        }
+      }
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    },
+    // `prose` styles <pre> with a dark code-editor background - skip it for
+    // charts. `children` is the unresolved <code> element, so check its
+    // className prop directly rather than what it renders as.
+    pre({ children, ...props }) {
+      const child = Array.isArray(children) ? children[0] : children;
+      const codeClassName = isValidElement<{ className?: string }>(child)
+        ? child.props.className
+        : undefined;
+      if (codeClassName?.includes('language-chart')) {
+        return <>{children}</>;
+      }
+      return <pre {...props}>{children}</pre>;
+    },
+  };
+}
 
 type MessageBubbleProps = {
   role: 'user' | 'assistant';
@@ -15,6 +64,25 @@ type MessageBubbleProps = {
 
 export function MessageBubble({ role, content, toolCalls, stopped, pendingToolSql }: MessageBubbleProps) {
   const isUser = role === 'user';
+
+  const validNumbers = useMemo(() => {
+    const numbers = new Set<number>();
+    toolCalls?.forEach((toolCall) => {
+      toolCall.rows.forEach((row) => {
+        Object.values(row).forEach((value) => {
+          // bigint columns come back as numeric strings, not JS numbers.
+          if (typeof value === 'number') {
+            numbers.add(value);
+          } else if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value)) {
+            numbers.add(Number(value));
+          }
+        });
+      });
+    });
+    return numbers;
+  }, [toolCalls]);
+
+  const markdownComponents = useMemo(() => buildMarkdownComponents(validNumbers), [validNumbers]);
 
   return (
     <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
@@ -33,12 +101,11 @@ export function MessageBubble({ role, content, toolCalls, stopped, pendingToolSq
             {isUser ? (
               <p className="whitespace-pre-wrap">{content}</p>
             ) : (
-              // overflow-x-auto: a markdown table's intrinsic width can
-              // easily exceed the bubble's max-w-[85%] (e.g. 5+ currency
-              // columns) - without this it just bleeds past the bubble's
-              // rounded corners instead of scrolling within its own bounds.
+              // overflow-x-auto: wide tables scroll instead of bleeding past the bubble.
               <div className="prose prose-sm dark:prose-invert max-w-none overflow-x-auto prose-p:my-1.5 prose-table:my-2">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {content}
+                </ReactMarkdown>
               </div>
             )}
           </div>
