@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import {
@@ -6,8 +7,12 @@ import {
   useDeleteConversationMutation,
 } from '@/shared/api/conversations/conversations.hook';
 
+// selectedId is the URL's :conversationId, not local state, so a page
+// refresh stays on the same conversation instead of always resetting to
+// the empty/new-chat view.
 export function useConversationSidebar() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { conversationId: selectedId = null } = useParams<{ conversationId: string }>();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -15,20 +20,23 @@ export function useConversationSidebar() {
   const deleteMutation = useDeleteConversationMutation();
 
   function selectConversation(id: string) {
-    setSelectedId(id);
+    navigate(`/c/${id}`);
     setIsSidebarOpen(false);
   }
 
   function newChat() {
-    setSelectedId(null);
+    navigate('/');
     setIsSidebarOpen(false);
   }
 
   // Called when a message sent with no conversationId creates a new one
   // mid-turn - only adopts it if the user hasn't since navigated away
-  // (matches the previous `current ?? id` guard).
+  // (matches the previous `current ?? id` guard). `replace` so streaming
+  // into a fresh conversation doesn't add a spare back-button entry.
   function adoptConversationId(id: string) {
-    setSelectedId((current) => current ?? id);
+    if (!selectedId) {
+      navigate(`/c/${id}`, { replace: true });
+    }
   }
 
   function requestDelete(id: string) {

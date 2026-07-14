@@ -20,6 +20,14 @@ export function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/c/:conversationId"
+        element={
+          <ProtectedRoute>
+            <ChatPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
