@@ -1,0 +1,63 @@
+meta {
+  name: list-conversations
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{url}}/v1/conversations
+  body: none
+  auth: inherit
+}
+
+docs {
+  Ordered most-recently-updated first. Only the requesting user's own
+  conversations - scoped by userId from the JWT, not a query param.
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/conversations
+    method: GET
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      content-length: 233
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 200
+      text: OK
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "conversations": [
+              {
+                "attributes": {
+                  "id": "019f5fb3-6660-7770-9c89-e4258b5b20c4",
+                  "title": "What was Apple revenue in 2023?",
+                  "createdAt": "2026-07-14T08:17:00.512Z",
+                  "updatedAt": "2026-07-14T08:17:00.512Z"
+                }
+              }
+            ]
+          }
+        }
+      '''
+    }
+  }
+}

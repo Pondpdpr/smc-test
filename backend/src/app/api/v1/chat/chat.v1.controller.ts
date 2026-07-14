@@ -5,12 +5,14 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Req,
   Res,
 } from '@nestjs/common';
-import type { FastifyReply } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import { ChatService } from '@/domain/logic/chat/chat.service';
 import { ChatStopService } from '@/domain/logic/chat/chat-stop.service';
+import { config } from '@/infra/config';
 import { LoggerService } from '@/infra/global/logger/logger.service';
 import { UserClaims } from '@/infra/middleware/jwt/jwt.common';
 
@@ -19,6 +21,22 @@ import { GetUsageQuery } from './get-usage/get-usage.query';
 import { StopChatCommand } from './stop-chat/stop-chat.command';
 import { StopChatResponse } from './stop-chat/stop-chat.dto';
 import { StreamChatDto } from './stream-chat/stream-chat.dto';
+
+// writeHead() below writes straight to the raw Node response, bypassing
+// @fastify/cors entirely (it only hooks into Fastify's own reply lifecycle) -
+// so this stream is the one endpoint that has to add its own CORS headers,
+// replicating the same origin whitelist main.ts hands to the cors plugin.
+function corsHeadersFor(request: FastifyRequest): Record<string, string> {
+  const origin = request.headers.origin;
+  if (!origin || !config().app.corsOrigin.includes(origin)) {
+    return {};
+  }
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+    Vary: 'Origin',
+  };
+}
 
 // Safe to call after headers are sent - a destroyed/closed socket makes
 // .write() a no-op-ish throw, which we don't want taking down the process.
@@ -58,6 +76,7 @@ export class ChatV1Controller {
   async stream(
     @UserClaims() claims: UserClaims,
     @Body() body: StreamChatDto,
+    @Req() request: FastifyRequest,
     @Res({ passthrough: false }) reply: FastifyReply,
   ): Promise<void> {
     const { conversationId } = await this.chatService.prepareTurn(
@@ -69,6 +88,7 @@ export class ChatV1Controller {
     );
 
     reply.raw.writeHead(200, {
+      ...corsHeadersFor(request),
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',

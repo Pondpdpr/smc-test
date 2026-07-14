@@ -11,9 +11,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // Fallback only - VITE_API_URL is set by default (see .env.example), so the app
-  // calls the backend directly and never actually routes through this proxy.
-  // It only matters if VITE_API_URL is cleared, making API calls relative again.
+  // Active in dev (.env.development leaves VITE_API_URL empty, so calls stay
+  // relative and this proxy handles them - no CORS needed for dev at all).
   server: {
     port: 5173,
     proxy: {
@@ -23,6 +22,9 @@ export default defineConfig({
       },
     },
   },
+  // Unused in practice - .env.production sets VITE_API_URL, so build/preview
+  // call the backend directly rather than routing through this proxy. Kept as
+  // a fallback for if VITE_API_URL is ever cleared for a production build.
   preview: {
     port: 4173,
     proxy: {

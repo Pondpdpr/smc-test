@@ -1,0 +1,60 @@
+meta {
+  name: stop-chat
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{url}}/v1/chat/stop/:conversationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  conversationId: 019f5fb3-6660-7770-9c89-e4258b5b20c4
+}
+
+docs {
+  Sets a Redis flag the in-flight stream checks between OpenAI stream
+  chunks, and aborts the OpenAI request itself - not just a local read
+  stop. { "stopped": true } even if no turn was actually in flight for
+  that conversation (idempotent, not an error).
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/chat/stop/019f5fb3-6660-7770-9c89-e4258b5b20c4
+    method: POST
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      content-length: 49
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 201
+      text: Created
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "stopped": true
+          }
+        }
+      '''
+    }
+  }
+}

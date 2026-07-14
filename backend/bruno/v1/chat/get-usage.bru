@@ -1,0 +1,56 @@
+meta {
+  name: get-usage
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{url}}/v1/chat/usage
+  body: none
+  auth: inherit
+}
+
+docs {
+  spendUsd resets to 0 automatically at resetAt (Redis key TTL expiry, see
+  USAGE_RESET_INTERVAL_SECONDS) - no cron job involved.
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/chat/usage
+    method: GET
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      content-length: 97
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 200
+      text: OK
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "spendUsd": 0,
+            "limitUsd": 1,
+            "resetAt": "2026-07-14T09:15:21.022Z"
+          }
+        }
+      '''
+    }
+  }
+}

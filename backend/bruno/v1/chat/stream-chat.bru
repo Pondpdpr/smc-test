@@ -1,0 +1,88 @@
+meta {
+  name: stream-chat
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{url}}/v1/chat/stream
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "message": "What was Apple revenue in 2023?"
+  }
+}
+
+docs {
+  Server-Sent Events, not a single JSON response - Bruno will show the raw
+  stream in the response pane rather than a parsed body. Event types, in
+  order: conversation (once, only when conversationId was omitted) ->
+  tool_call -> tool_result -> token (many) -> done, or error instead of
+  done/token if the turn fails.
+
+  Omit conversationId to start a new conversation; pass an existing one to
+  continue it. 429 { "key": "usageLimitExceeded" } if the per-user spend
+  cap (see USAGE_LIMIT_USD) is already hit - returned as a normal JSON
+  error before the stream opens, not as an SSE event.
+
+  example{} below is the raw event stream actually captured for this
+  request, not a parsed JSON body.
+}
+
+example {
+  name: success (raw SSE stream)
+
+  request: {
+    url: {{url}}/v1/chat/stream
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "message": "What was Apple revenue in 2023?"
+      }
+    }
+  }
+
+  response: {
+    headers: {
+      content-type: text/event-stream
+      cache-control: no-cache, no-transform
+      connection: keep-alive
+      content-encoding: identity
+      x-accel-buffering: no
+    }
+
+    status: {
+      code: 200
+      text: OK
+    }
+
+    body: {
+      type: text
+      content: '''
+        event: conversation
+        data: {"conversationId":"019f5fb3-6660-7770-9c89-e4258b5b20c4"}
+
+        event: tool_call
+        data: {"sql":"select \"company\", \"ticker\", \"sector\", \"year\", \"revenue\", \"gross_profit\", \"operating_income\", \"net_income\" from \"financial_data\" where (regexp_replace(lower(\"financial_data\".\"company\"), '[^a-z0-9]', '', 'g') like '%apple%' or lower(financial_data.ticker) = 'apple') and \"year\" in (2023) order by \"company\", \"year\""}
+
+        event: tool_result
+        data: {"rowCount":1,"rows":[{"year":2023,"sector":"Technology","ticker":"AAPL","company":"Apple","revenue":"383285000000","net_income":"96995000000","gross_profit":"169148000000","operating_income":"114301000000"}]}
+
+        event: token
+        data: {"delta":"In"}
+
+        event: token
+        data: {"delta":" 2023"}
+
+        (... more token events, one per streamed chunk ...)
+
+        event: done
+        data: {"messageId":"019f5fb3-766e-74ef-aa70-b8205580c8cf","stopped":false,"costUsd":0.0002247}
+      '''
+    }
+  }
+}

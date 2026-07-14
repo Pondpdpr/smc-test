@@ -1,0 +1,98 @@
+meta {
+  name: get-messages
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{url}}/v1/conversations/:id/messages
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 019f5fb3-6660-7770-9c89-e4258b5b20c4
+}
+
+docs {
+  404s if the conversation doesn't exist or belongs to a different user -
+  same response either way, to avoid leaking existence to another account.
+
+  toolCalls is null for user messages and for assistant messages that
+  answered without calling query_financial_data (e.g. "data not available").
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/conversations/019f5fb3-6660-7770-9c89-e4258b5b20c4/messages
+    method: GET
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      content-length: 992
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 200
+      text: OK
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "messages": [
+              {
+                "attributes": {
+                  "id": "019f5fb3-666e-7249-93a2-f8e00d8c1b73",
+                  "role": "user",
+                  "content": "What was Apple revenue in 2023?",
+                  "toolCalls": null,
+                  "stopped": false,
+                  "createdAt": "2026-07-14T08:17:00.526Z"
+                }
+              },
+              {
+                "attributes": {
+                  "id": "019f5fb3-766e-74ef-aa70-b8205580c8cf",
+                  "role": "assistant",
+                  "content": "In 2023, Apple's revenue was $383,285,000,000.",
+                  "toolCalls": [
+                    {
+                      "sql": "select \"company\", \"ticker\", \"sector\", \"year\", \"revenue\", \"gross_profit\", \"operating_income\", \"net_income\" from \"financial_data\" where (regexp_replace(lower(\"financial_data\".\"company\"), '[^a-z0-9]', '', 'g') like '%apple%' or lower(financial_data.ticker) = 'apple') and \"year\" in (2023) order by \"company\", \"year\"",
+                      "rows": [
+                        {
+                          "year": 2023,
+                          "sector": "Technology",
+                          "ticker": "AAPL",
+                          "company": "Apple",
+                          "revenue": "383285000000",
+                          "net_income": "96995000000",
+                          "gross_profit": "169148000000",
+                          "operating_income": "114301000000"
+                        }
+                      ]
+                    }
+                  ],
+                  "stopped": false,
+                  "createdAt": "2026-07-14T08:17:04.622Z"
+                }
+              }
+            ]
+          }
+        }
+      '''
+    }
+  }
+}

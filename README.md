@@ -76,7 +76,7 @@ npm run cli initials:seed          # optional: seeds superadmin@example.com / pa
 **Terminal 4 — frontend**
 ```bash
 cd frontend
-cp .env.example .env
+cp .env.production.example .env.production
 npm install
 npm run build
 npm run preview
@@ -86,7 +86,7 @@ Then open **http://localhost:4173**. Either register a new account (the verifica
 
 Migrations run automatically on backend boot (`main.ts`) — no separate migrate step needed.
 
-For active development instead, `npm run dev` (backend, runs the API + worker together) and `npm run dev` (frontend, port 5173) give hot-reload without the build step.
+For active development instead, `npm run dev` (backend, runs the API + worker together) and `cp .env.development.example .env.development && npm run dev` (frontend, port 5173) give hot-reload without the build step.
 
 ## Key environment variables
 
@@ -101,7 +101,14 @@ For active development instead, `npm run dev` (backend, runs the API + worker to
 | `JWT_SALT` | Signs access tokens - already set to a dev value in `.env.example` |
 | `CORS_ORIGIN` | Comma-separated allowed origins; must include the frontend's origin(s) - defaults already cover `:5173` (dev) and `:4173` (preview) |
 
-**Frontend (`frontend/.env`)** — `VITE_API_URL` (see `frontend/.env.example`) points the frontend straight at the backend (defaults to `http://localhost:3000`), rather than relying on Vite's dev/preview proxy. Every API call, including the SSE stream (raw `fetch`, not axios), is prefixed with it, which makes each request cross-origin from the browser's point of view - hence why the backend's `CORS_ORIGIN` above needs to list the frontend's port(s). For a real deployment with the frontend and backend on separate hosts, change `VITE_API_URL` to the backend's public URL and add the frontend's real origin to `CORS_ORIGIN`.
+**Frontend** — `VITE_API_URL` points the frontend straight at the backend; every API call, including the SSE stream (raw `fetch`, not axios), is prefixed with it, which makes each request cross-origin from the browser's point of view - hence why the backend's `CORS_ORIGIN` above needs to list the frontend's port(s). Split across Vite's mode-specific env files rather than one `.env`, since dev and preview need different values:
+
+| File | Used by | `VITE_API_URL` |
+|---|---|---|
+| `frontend/.env.development` | `npm run dev` (port 5173) | Empty - relative calls go through Vite's dev-server proxy instead, so dev needs no CORS setup at all |
+| `frontend/.env.production` | `npm run build` + `npm run preview` (port 4173 - preview defaults to production mode) | `http://localhost:3000` - bypasses the proxy, so `CORS_ORIGIN` must list `:4173` |
+
+For a real deployment with the frontend and backend on separate hosts, change `.env.production`'s `VITE_API_URL` to the backend's public URL and add the frontend's real origin to `CORS_ORIGIN`.
 
 ## Testing
 

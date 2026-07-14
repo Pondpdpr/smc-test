@@ -1,0 +1,65 @@
+meta {
+  name: delete-conversation
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{url}}/v1/conversations/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 019f5fb3-6660-7770-9c89-e4258b5b20c4
+}
+
+docs {
+  Returns the deleted conversation's own attributes (not just a boolean) so
+  the frontend can e.g. show "Deleted '<title>'" without a second lookup.
+}
+
+example {
+  name: success
+
+  request: {
+    url: {{url}}/v1/conversations/019f5fb3-6660-7770-9c89-e4258b5b20c4
+    method: DELETE
+  }
+
+  response: {
+    headers: {
+      vary: Origin, Accept-Encoding
+      access-control-allow-credentials: true
+      content-type: application/json; charset=utf-8
+      content-length: 230
+      connection: keep-alive
+      keep-alive: timeout=72
+    }
+
+    status: {
+      code: 200
+      text: OK
+    }
+
+    body: {
+      type: json
+      content: '''
+        {
+          "success": true,
+          "key": "",
+          "data": {
+            "conversation": {
+              "attributes": {
+                "id": "019f5fb3-6660-7770-9c89-e4258b5b20c4",
+                "title": "What was Apple revenue in 2023?",
+                "createdAt": "2026-07-14T08:17:00.512Z",
+                "updatedAt": "2026-07-14T08:17:00.512Z"
+              }
+            }
+          }
+        }
+      '''
+    }
+  }
+}
