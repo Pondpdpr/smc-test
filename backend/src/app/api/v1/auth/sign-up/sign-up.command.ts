@@ -72,9 +72,8 @@ export class SignUpCommand implements CommandInterface {
       });
     }
 
-    // No access token here on purpose: sign-in is gated on email
-    // verification (see sign-in.command.ts), so registering alone must not
-    // hand out a usable session.
+    // No access token here on purpose - sign-in is gated on email verification,
+    // so registering alone must not hand out a usable session.
     return toHttpSuccess({
       data: {
         user: {

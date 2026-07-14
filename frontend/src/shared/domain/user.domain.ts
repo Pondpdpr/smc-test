@@ -1,7 +1,5 @@
-// Hand-typed rather than a cross-package import: frontend/backend are
-// separate npm projects with their own @/ path aliases, so a literal
-// import would break tsc's project boundaries and Vite's dev-server file
-// access.
+// Hand-typed, not a cross-package import - frontend/backend are separate npm
+// projects with their own @/ aliases, so a literal import would break both.
 export type UserStatus = 'ACTIVE' | 'INACTIVE';
 
 export type User = {

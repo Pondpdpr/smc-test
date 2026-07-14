@@ -8,9 +8,8 @@ export type StopChatResult = {
   stopped: boolean;
 };
 
-// The 'conversation' event is added by the controller (writeSseEvent(reply,
-// 'conversation', ...) fires before the stream itself starts) - every other
-// variant comes from the streaming service.
+// 'conversation' fires from the controller before the stream starts - every
+// other variant comes from the streaming service itself.
 export type ChatStreamEvent =
   | { event: 'conversation'; data: { conversationId: string } }
   | { event: 'tool_call'; data: { sql: string } }

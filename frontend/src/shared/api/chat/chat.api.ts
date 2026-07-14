@@ -32,9 +32,8 @@ function streamRequest(params: { conversationId?: string; message: string }, sig
   });
 }
 
-// Native EventSource can't POST a body, so the stream is parsed by hand off
-// fetch(). Aborting `signal` is also how Stop works. No hook wraps this;
-// called directly from ChatPage.
+// Native EventSource can't POST a body, so the stream is parsed by hand off fetch() -
+// `signal` abort is also how Stop works. Called directly from ChatPage, no hook.
 export async function streamChat(
   params: { conversationId?: string; message: string },
   onEvent: (event: ChatStreamEvent) => void,

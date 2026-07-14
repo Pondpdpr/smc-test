@@ -6,10 +6,8 @@ import type { MainDb } from '@/infra/db/db.main';
 
 import { renderFinancialQuerySql } from './financial-query.tool';
 
-// .compile() is pure SQL generation - it never opens a connection - so a
-// real Kysely instance pointed at a bogus connection string is enough here,
-// no live Postgres (or the full Nest DI graph MainDb normally comes from)
-// needed.
+// .compile() never opens a connection, so a real Kysely instance pointed at a bogus
+// connection string is enough - no live Postgres or Nest DI graph needed.
 const kysely = new Kysely<DB>({
   dialect: new PostgresDialect({
     pool: new pg.Pool({ connectionString: 'postgresql://unused/unused' }),

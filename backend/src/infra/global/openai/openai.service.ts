@@ -19,10 +19,8 @@ export class OpenAiService {
     private configService: ConfigService,
   ) {}
 
-  // Thin wrapper around the raw SDK call - no business logic here (no
-  // tool-calling loop, no SSE formatting, no cost math). That all lives in
-  // domain/logic/chat/chat.service.ts, which is the one that knows *why*
-  // it's calling OpenAI.
+  // Thin wrapper around the raw SDK call - no tool-calling loop, SSE formatting, or
+  // cost math here; that all lives in domain/logic/chat/chat.service.ts.
   streamChatCompletion(
     messages: ChatCompletionMessageParam[],
     tools: ChatCompletionTool[],

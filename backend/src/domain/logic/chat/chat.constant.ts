@@ -38,9 +38,8 @@ Rules:
   Still include the Markdown table too - the chart supplements it, it doesn't
   replace it.`;
 
-// Illustrative per-model pricing for cost tracking (USD per 1M tokens) - not
-// guaranteed to match OpenAI's current published rates exactly, but close
-// enough to keep the per-user spend limit meaningful.
+// Illustrative per-model pricing (USD per 1M tokens) - not guaranteed to match
+// OpenAI's current rates exactly, but close enough for the spend limit.
 export const MODEL_PRICING_USD_PER_MILLION_TOKENS: Record<
   string,
   { prompt: number; completion: number }

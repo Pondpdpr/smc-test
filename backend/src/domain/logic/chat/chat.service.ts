@@ -56,9 +56,8 @@ type TokenUsage = { prompt_tokens: number; completion_tokens: number };
 
 @Injectable()
 export class ChatService {
-  // Loading a tokenizer's BPE merge table isn't free, so one is kept alive
-  // per encoding name for the life of the process rather than rebuilt on
-  // every stopped/estimated turn.
+  // Loading a tokenizer's BPE merge table isn't free - kept alive per encoding
+  // name for the process's life rather than rebuilt on every stopped/estimated turn.
   private _encoderCache = new Map<string, Tiktoken>();
 
   constructor(
@@ -71,9 +70,8 @@ export class ChatService {
     private chatStopService: ChatStopService,
   ) {}
 
-  // Validation + the user-message write that must happen BEFORE the SSE
-  // stream opens, so a bad request still gets a normal HTTP error response
-  // (404/429) instead of a half-opened stream - see chat.v1.controller.ts.
+  // Validation + the user-message write that must happen before the SSE stream opens,
+  // so a bad request still gets a normal HTTP error (404/429), not a half-opened stream.
   async prepareTurn(
     userId: string,
     params: { conversationId?: string; message: string },
@@ -99,10 +97,8 @@ export class ChatService {
     userId: string,
     conversationId: string,
   ): AsyncGenerator<ChatStreamEvent> {
-    // Declared outside the try block so a mid-flight failure (e.g. OpenAI
-    // erroring) can still persist whatever was accumulated so far, instead
-    // of leaving the conversation with a dangling user question and no
-    // reply at all - see the catch block below.
+    // Declared outside the try block so a mid-flight failure (e.g. OpenAI erroring) can
+    // still persist what was accumulated, instead of leaving a dangling question with no reply.
     let content = '';
     let stopped = false;
     let costUsd = 0;
@@ -119,11 +115,8 @@ export class ChatService {
       for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round++) {
         const isLastAllowedRound = round === MAX_TOOL_CALL_ROUNDS - 1;
         const tools = isLastAllowedRound ? [] : [financialQueryTool];
-        // Forced (not 'auto') on the first round: this app only exists to
-        // answer from financial_data, so every user turn re-queries rather
-        // than letting the model "recall" a figure it saw earlier in the
-        // conversation history - verified live that 'auto' skips the tool
-        // on follow-up questions once a number is already in context.
+        // Forced (not 'auto') on round 0 - every turn must re-query financial_data rather
+        // than let the model "recall" a figure; 'auto' was verified to skip the tool once one's in context.
         const toolChoice = round === 0 ? ('required' as const) : undefined;
 
         const stream = await this.openAiService.streamChatCompletion(
@@ -175,9 +168,8 @@ export class ChatService {
 
         content += roundContent;
 
-        // Aborted mid-stream: we never got the final usage chunk, so
-        // tokenize locally rather than under-billing the partial response to
-        // $0 (S3 requires cost still be deducted).
+        // Aborted mid-stream means no final usage chunk - tokenize locally rather than
+        // under-billing the partial response to $0 (S3 requires cost still be deducted).
         if (!gotUsage) {
           costUsd += this._estimateCost(messages, roundContent);
         }
@@ -239,9 +231,8 @@ export class ChatService {
       const errorMessage =
         error instanceof Error ? error.message : 'Something went wrong';
 
-      // Still persist whatever was generated before the failure (and still
-      // deduct its cost), so the conversation doesn't end up with a
-      // dangling user question and no reply on reload.
+      // Still persist whatever was generated (and deduct its cost), so the
+      // conversation doesn't end up with a dangling question and no reply on reload.
       const noteworthyContent = content
         ? `${content}\n\n[Error: ${errorMessage}]`
         : `Sorry, something went wrong: ${errorMessage}`;
@@ -346,12 +337,8 @@ export class ChatService {
     );
   }
 
-  // Only used when a stream is aborted (Stop) before OpenAI's final usage
-  // chunk arrives, so there's no real token count to bill from. Tokenizes
-  // the exact prompt sent and the exact partial completion the user
-  // actually received, rather than guessing from character counts - the
-  // completion side in particular is exact, since roundContent is the real
-  // text that was streamed, not an approximation of it.
+  // Only used when Stop aborts a stream before OpenAI's final usage chunk arrives -
+  // tokenizes the exact prompt and the exact partial completion actually streamed.
   private _estimateCost(
     messages: ChatCompletionMessageParam[],
     roundContent: string,
@@ -376,10 +363,8 @@ export class ChatService {
       return cached;
     }
 
-    // The model name is user-configurable (OPENAI_MODEL) and may not be one
-    // tiktoken recognizes by name (a future/renamed model) - o200k_base is
-    // the encoding gpt-4o/gpt-4o-mini both use, and a reasonable default
-    // otherwise.
+    // OPENAI_MODEL is user-configurable and may not be one tiktoken recognizes by name -
+    // o200k_base is the encoding gpt-4o/gpt-4o-mini both use, and a reasonable default otherwise.
     let encoder: Tiktoken;
     try {
       encoder = encoding_for_model(model as TiktokenModel);

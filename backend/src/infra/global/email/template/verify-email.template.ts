@@ -6,10 +6,8 @@ type VerifyEmailProps = {
   url: string;
 };
 
-// Written with React.createElement (not JSX/.tsx) - this repo's SWC build
-// (nest-cli.json builder: "swc") does not compile .tsx files into dist
-// (verified: the pre-existing template.default.tsx never made it into a
-// build either), so .tsx here would work in dev but silently 404/500 in prod.
+// React.createElement, not JSX/.tsx - this repo's SWC build doesn't compile .tsx
+// into dist, so a .tsx template works in dev but silently 404/500s in prod.
 export default function VerifyEmailTemplate({
   firstName,
   url,

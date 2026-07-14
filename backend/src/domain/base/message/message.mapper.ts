@@ -47,9 +47,8 @@ export function messageToPg(data: Message): MessagePg {
     conversation_id: data.conversationId,
     role: data.role,
     content: data.content,
-    // node-postgres serializes plain JS objects to JSON automatically, but
-    // a raw JS array is sent using Postgres's native array-literal syntax
-    // instead - invalid for a jsonb column. Must stringify arrays by hand.
+    // node-postgres sends a raw JS array as Postgres's array-literal syntax, not JSON -
+    // invalid for a jsonb column, so arrays must be stringified by hand.
     tool_call: data.toolCalls ? JSON.stringify(data.toolCalls) : null,
     stopped: data.stopped,
     cost_usd_micros: data.costUsdMicros,

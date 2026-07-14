@@ -8,8 +8,7 @@ import {
 } from '@/shared/api/conversations/conversations.hook';
 
 // selectedId is the URL's :conversationId, not local state, so a page
-// refresh stays on the same conversation instead of always resetting to
-// the empty/new-chat view.
+// refresh stays on the same conversation instead of resetting to new-chat.
 export function useConversationSidebar() {
   const { conversationId: selectedId = null } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
@@ -29,10 +28,8 @@ export function useConversationSidebar() {
     setIsSidebarOpen(false);
   }
 
-  // Called when a message sent with no conversationId creates a new one
-  // mid-turn - only adopts it if the user hasn't since navigated away
-  // (matches the previous `current ?? id` guard). `replace` so streaming
-  // into a fresh conversation doesn't add a spare back-button entry.
+  // Adopts a conversation id created mid-turn, unless the user already navigated
+  // away. `replace` so streaming into a fresh conversation adds no back-button entry.
   function adoptConversationId(id: string) {
     if (!selectedId) {
       navigate(`/c/${id}`, { replace: true });

@@ -16,11 +16,8 @@ export type UsageStatus = {
 @Injectable()
 export class UsageService {
   constructor(
-    // Bypasses CacheService on purpose: CacheService treats Redis as
-    // optional (silently no-ops unless ENABLE_CACHE=true), but spend
-    // enforcement is a graded requirement and must never silently skip.
-    // ioredis's lazyConnect means commands on this client still connect
-    // transparently regardless of that flag.
+    // Bypasses CacheService on purpose - it treats Redis as optional (no-ops unless
+    // ENABLE_CACHE=true), but spend enforcement must never silently skip.
     @Inject(REDIS_CLIENT)
     private redisClient: Redis,
     private configService: ConfigService,

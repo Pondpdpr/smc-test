@@ -22,10 +22,8 @@ import { StopChatCommand } from './stop-chat/stop-chat.command';
 import { StopChatResponse } from './stop-chat/stop-chat.dto';
 import { StreamChatDto } from './stream-chat/stream-chat.dto';
 
-// writeHead() below writes straight to the raw Node response, bypassing
-// @fastify/cors entirely (it only hooks into Fastify's own reply lifecycle) -
-// so this stream is the one endpoint that has to add its own CORS headers,
-// replicating the same origin whitelist main.ts hands to the cors plugin.
+// writeHead() below bypasses @fastify/cors entirely, so this is the one
+// endpoint that has to add its own CORS headers, matching main.ts's whitelist.
 function corsHeadersFor(request: FastifyRequest): Record<string, string> {
   const origin = request.headers.origin;
   if (!origin || !config().app.corsOrigin.includes(origin)) {
@@ -61,17 +59,8 @@ export class ChatV1Controller {
     private loggerService: LoggerService,
   ) {}
 
-  // SSE, so this one doesn't follow the usual command/query-returns-JSON
-  // pattern - the controller owns writing the wire format itself. Validation
-  // and the user-message write happen in prepareTurn() BEFORE we touch the
-  // raw response, so a bad request (404/429) still comes back as a normal
-  // JSON error rather than a half-opened stream.
-  //
-  // Everything AFTER writeHead() is wrapped in try/catch/finally and never
-  // rethrows: once raw headers are sent, Nest's default exception handling
-  // would try reply.send() on an error, which crashes the whole process with
-  // ERR_HTTP_HEADERS_SENT (this happened in practice - a disconnecting
-  // client mid-stream threw past an unguarded loop).
+  // SSE - the controller owns the wire format; prepareTurn() validates before we touch the raw response.
+  // Everything after writeHead() must never rethrow, or Nest's default handler crashes with ERR_HTTP_HEADERS_SENT.
   @Post('stream')
   async stream(
     @UserClaims() claims: UserClaims,
@@ -92,18 +81,16 @@ export class ChatV1Controller {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
-      // Both bypass response buffering that would otherwise defeat
-      // token-by-token streaming: compression middleware buffers to gzip,
-      // and reverse proxies like nginx buffer by default too.
+      // Both defeat response buffering that would break token-by-token streaming
+      // (compression gzip-buffers, reverse proxies like nginx buffer by default).
       'Content-Encoding': 'identity',
       'X-Accel-Buffering': 'no',
     });
 
     let finished = false;
 
-    // If the client disconnects (tab closed, Stop button aborts the fetch),
-    // treat it the same as an explicit stop so we don't keep burning OpenAI
-    // calls against a dead socket.
+    // A client disconnect (tab closed, Stop aborts the fetch) counts as an
+    // explicit stop too, so we don't keep burning OpenAI calls on a dead socket.
     reply.raw.on('close', () => {
       if (!finished) {
         this.chatStopService.requestStop(conversationId).catch(() => {});
@@ -123,9 +110,8 @@ export class ChatV1Controller {
         writeSseEvent(reply, chatEvent.event, chatEvent.data);
       }
     } catch (error) {
-      // Last-resort safety net - chat.service.ts already catches its own
-      // errors and yields an 'error' event, so reaching here means
-      // something failed outside that (e.g. the write itself).
+      // Last resort - chat.service.ts catches its own errors as an 'error' event,
+      // so reaching here means something failed outside that (e.g. the write itself).
       this.loggerService.error(
         error instanceof Error ? error : new Error(String(error)),
       );

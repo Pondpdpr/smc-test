@@ -13,9 +13,8 @@ export function useUsageQuery() {
     queryKey: chatQueryKeys.usage(),
     queryFn: getUsage,
     select: (res) => res.data,
-    // Otherwise the badge only updates after a chat turn or a tab refocus -
-    // someone sitting on the page waiting out their reset would see stale
-    // spend/limit numbers indefinitely.
+    // Otherwise the badge only updates on a chat turn or tab refocus - someone
+    // waiting out their reset would see stale numbers indefinitely.
     refetchInterval: 10_000,
   });
 }

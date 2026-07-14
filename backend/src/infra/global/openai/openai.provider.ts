@@ -13,12 +13,8 @@ export const OpenAiClientProvider: Provider = {
     const openaiConfig =
       configService.getOrThrow<AppConfig['openai']>('openai');
 
-    // The SDK constructor throws if apiKey is an empty string, which would
-    // otherwise crash the whole app at boot (this provider is global, so
-    // every process - API, CLI, tests - would fail before running a single
-    // line, even ones that never touch chat). Falling back to a placeholder
-    // means an unconfigured key only fails when a chat request is actually
-    // made, not at boot.
+    // The SDK throws on an empty apiKey, which would crash every process (API, CLI,
+    // tests) at boot - a placeholder defers that failure to an actual chat request.
     return new OpenAI({ apiKey: openaiConfig.apiKey || 'sk-not-configured' });
   },
 };

@@ -7,9 +7,8 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('email_verified_at', 'timestamptz')
     .execute();
 
-  // Single-use, short-lived tokens: a row existing = valid & unused. Verifying
-  // deletes the row rather than tracking a used_at flag - see
-  // email-verification-token.service.ts.
+  // Single-use, short-lived tokens: a row existing = valid & unused - verifying
+  // deletes the row rather than tracking a used_at flag.
   await db.schema
     .createTable('email_verification_tokens')
     .addColumn('id', 'uuid', (col) => col.primaryKey())

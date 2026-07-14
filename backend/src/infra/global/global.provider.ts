@@ -14,10 +14,8 @@ import { ReqStorage } from './req-storage/req-storage.service';
 import { StorageProvider } from './storage/storage.provider';
 import { StorageService } from './storage/storage.service';
 
-// AMQP is global again: the register flow publishes a "send verification
-// email" job onto RabbitMQ, consumed by the worker - see domain/queue and
-// app/worker. This means RabbitMQ (docker-compose) must be up for the API
-// (and tests) to boot, same as Postgres/Redis.
+// AMQP is global again for the "send verification email" job (see domain/queue,
+// app/worker) - RabbitMQ must be up for the API/tests to boot, same as Postgres/Redis.
 export const GLOBAL_PROVIDER: Provider[] = [
   // Provider
   RedisCacheProvider,

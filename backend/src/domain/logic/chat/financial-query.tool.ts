@@ -5,11 +5,8 @@ import { MainDb } from '@/infra/db/db.main';
 
 export const FINANCIAL_QUERY_TOOL_NAME = 'query_financial_data';
 
-// The one tool the model may call. Args are structured (not raw SQL) so the
-// query is always a bounded SELECT against financial_data - the literal SQL
-// we build from these args is what gets rendered to the user as the
-// "visibly rendered" tool call (assignment section 2), the model itself
-// never writes SQL.
+// The one tool the model may call. Args are structured (not raw SQL) so the query is
+// always a bounded SELECT - the model never writes SQL; we build it and render it to the user.
 export const financialQueryTool: ChatCompletionTool = {
   type: 'function',
   function: {
@@ -48,9 +45,8 @@ export type FinancialQueryArgs = {
   sectors?: string[];
 };
 
-// Postgres-side normalization so "Bank of America" matches the stored
-// "BankOfAmerica", "Bristol Myers" matches "Bristol-Myers", etc. - both
-// sides get lowercased and stripped to alphanumerics before comparing.
+// Postgres-side normalization so "Bank of America" matches stored "BankOfAmerica" -
+// both sides get lowercased and stripped to alphanumerics before comparing.
 function normalizedColumn(column: string) {
   return sql<string>`regexp_replace(lower(${sql.ref(column)}), '[^a-z0-9]', '', 'g')`;
 }

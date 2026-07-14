@@ -32,9 +32,8 @@ export type ChartSpec = {
   data: Record<string, string | number>[];
 };
 
-// The model's declared series `key` sometimes doesn't match the property name
-// it actually used in `data` rows - remap positionally when the counts line up,
-// otherwise refuse rather than render an empty chart.
+// The declared series `key` sometimes doesn't match the row property name - remap
+// positionally when the counts line up, else refuse rather than render an empty chart.
 export function normalizeChartSpec(spec: ChartSpec): ChartSpec | null {
   if (!spec.data.length) return null;
   const firstRow = spec.data[0];
@@ -54,9 +53,8 @@ export function normalizeChartSpec(spec: ChartSpec): ChartSpec | null {
   return { ...spec, data };
 }
 
-// The model occasionally mistypes a figure when copying it into the chart JSON
-// (correct in its table, wrong here) - every plotted number must be traceable
-// to the real tool result, or the whole chart is rejected.
+// The model occasionally mistypes a figure copying it into the chart JSON - every
+// plotted number must be traceable to the real tool result, or the chart is rejected.
 export function isChartDataGrounded(spec: ChartSpec, validNumbers: Set<number>): boolean {
   if (validNumbers.size === 0) return true;
   return spec.data.every((row) =>

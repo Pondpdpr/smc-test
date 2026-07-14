@@ -59,9 +59,8 @@ export type AppConfig = {
     model: string;
   };
   usage: {
-    // Per-user spend limit and reset window (assignment section 2 & 6) -
-    // both configurable via env, e.g. lower them for fast local testing
-    // (USAGE_LIMIT_USD=0.001 USAGE_RESET_INTERVAL_SECONDS=180).
+    // Per-user spend limit and reset window - lower via env for fast local
+    // testing (USAGE_LIMIT_USD=0.001 USAGE_RESET_INTERVAL_SECONDS=180).
     limitUsd: number;
     resetIntervalSeconds: number;
   };

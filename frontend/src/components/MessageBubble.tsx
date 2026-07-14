@@ -38,9 +38,8 @@ function buildMarkdownComponents(validNumbers: Set<number>): Components {
         </code>
       );
     },
-    // `prose` styles <pre> with a dark code-editor background - skip it for
-    // charts. `children` is the unresolved <code> element, so check its
-    // className prop directly rather than what it renders as.
+    // `prose` styles <pre> with a dark code-editor background - skip it for charts.
+    // `children` is the unresolved <code> element, so check its className directly.
     pre({ children, ...props }) {
       const child = Array.isArray(children) ? children[0] : children;
       const codeClassName = isValidElement<{ className?: string }>(child)

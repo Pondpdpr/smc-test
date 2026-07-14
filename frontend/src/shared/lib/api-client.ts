@@ -42,9 +42,8 @@ export function getDeviceId(): string {
   return deviceId;
 }
 
-// 401 = every auth failure this backend produces. Only reached after the
-// response interceptor below already tried refreshAccessToken() and
-// failed - this is the final fallback, not the first reaction to a 401.
+// 401 = every auth failure this backend produces - only reached after the
+// response interceptor below already tried refreshAccessToken() and failed.
 export function handleFatalResponseStatus(status: number): void {
   if (status !== 401) {
     return;
@@ -64,9 +63,8 @@ type ApiEnvelope<T> = Partial<IStandardResponse<T & Record<string, any>>> & {
 
 type RequestOptions = { headers?: Record<string, string> };
 
-// Empty by default - relative `/v1/...` calls resolve against the current origin,
-// which the dev/preview server proxies to the local backend (see vite.config.ts).
-// Set VITE_API_URL when the frontend and backend are deployed on separate hosts.
+// From frontend/.env.development (empty, relies on Vite's dev proxy) or
+// .env.production (set - see vite.config.ts for how each is used).
 export const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? '';
 
 const client = axios.create({

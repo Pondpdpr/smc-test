@@ -25,9 +25,8 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollBottomRef = useRef<HTMLDivElement | null>(null);
-  // Which conversation the in-flight stream belongs to - isStreaming/streamingText are
-  // plain state, not conversation-scoped, so this stops a background reply from
-  // rendering under whatever conversation is now selected.
+  // Which conversation the in-flight stream belongs to - stops a background reply
+  // from rendering under whatever conversation is now selected.
   const streamingConversationIdRef = useRef<string | null>(null);
 
   const { data: messages = [] } = useMessagesQuery(conversationId);
@@ -38,9 +37,8 @@ export function useChat(conversationId: string | null, onConversationCreated: (i
     scrollBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingText, streamingToolCalls, pendingToolSql]);
 
-  // For a new conversation, useMessagesQuery flips on mid-turn and can fetch the
-  // already-persisted user message while the optimistic copy is still showing,
-  // duplicating the bubble - clear it as soon as the real list's tail matches.
+  // useMessagesQuery flips on mid-turn for a new conversation and can duplicate the
+  // optimistic bubble - clear it as soon as the real list's tail matches.
   useEffect(() => {
     if (!optimisticUserMessage) {
       return;

@@ -48,11 +48,8 @@ function ResultTable({ rows }: { rows: Record<string, unknown>[] }) {
   );
 }
 
-// Renders one SQL tool call live as it happens: shown the moment the query
-// is decided (pending), then filled in with results once they arrive.
-// Defaults to expanded - the whole point is that the query stays visibly
-// rendered, not that it collapses back into a one-line summary the moment
-// it resolves. Still collapsible, for a long chat history.
+// Shown live the moment a query is decided (pending), filled in on arrival. Defaults
+// expanded - the point is the query stays visibly rendered - but still collapsible.
 export function ToolCallCard({ toolCall, pending }: { toolCall: ToolCall; pending?: boolean }) {
   const [isOpen, setIsOpen] = useState(true);
 

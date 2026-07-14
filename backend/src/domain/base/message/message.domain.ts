@@ -3,9 +3,8 @@ import type { DBModel } from '@/infra/db/db.common';
 import type { WithState } from '@/shared/common/common.domain';
 import type { Serialized } from '@/shared/type/type.common';
 
-// One visibly-rendered SQL tool call (assignment section 2: Streaming). A
-// single turn can trigger more than one (the model may call the tool in
-// parallel for a few different lookups), so messages store an array.
+// One visibly-rendered SQL tool call - a turn can trigger more than one
+// (parallel tool calls), so messages store an array.
 export type MessageToolCall = {
   sql: string;
   rows: Record<string, unknown>[];

@@ -2,9 +2,8 @@ import { type Kysely, sql } from 'kysely';
 
 // `any` is required here since migrations should be frozen in time. alternatively, keep a "snapshot" db interface.
 export async function up(db: Kysely<any>): Promise<void> {
-  // Reference data from data/financial_data.sql (48 US companies, 2022-2025).
-  // Loaded separately via a seed script after this migration runs - see
-  // scripts/load-financial-data (COPY-compatible column order/names below).
+  // Reference data (48 US companies, 2022-2025) is loaded separately after this
+  // migration runs, via the `financial-data:seed` CLI command.
   await db.schema
     .createTable('financial_data')
     .addColumn('company', 'text', (col) => col.notNull())
