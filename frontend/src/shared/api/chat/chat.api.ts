@@ -1,4 +1,5 @@
 import {
+  API_BASE_URL,
   ApiError,
   api,
   getDeviceId,
@@ -20,7 +21,9 @@ function streamRequest(params: { conversationId?: string; message: string }, sig
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  return fetch(apiPaths.chat.stream, {
+  // Unlike axios's `client`, fetch() resolves a relative URL against the page's
+  // own origin - it needs API_BASE_URL prefixed explicitly for a separate-host deploy.
+  return fetch(`${API_BASE_URL}${apiPaths.chat.stream}`, {
     method: 'POST',
     headers,
     credentials: 'include',

@@ -42,34 +42,55 @@ frontend/src/
 
 ## Setup
 
-```bash
-# 1. Start Postgres, Redis, RabbitMQ, Mailhog (from repo root)
-docker compose up -d
+Runs across 4 separate terminals (API, worker, and frontend are all long-running
+processes that hold their terminal; the one-off seed commands can run from any
+terminal once the API is up).
 
-# 2. Backend
+**Terminal 1 — infra (from repo root)**
+```bash
+docker compose up -d   # Postgres, Redis, RabbitMQ, Mailhog
+```
+
+**Terminal 2 — backend API**
+```bash
 cd backend
 cp .env.example .env
 # edit .env and set OPENAI_API_KEY
 npm install
-npm run dev                        # runs the API + the email-sending worker together
-
-# 3. Seed the financial data (in a second terminal, from backend/)
-npm run cli financial-data:seed    # loads data/financial_data.sql - 48 companies, 2022-2025
-
-# 4. (optional) seed a ready-to-use test login instead of registering fresh
-npm run cli initials:seed          # creates superadmin@example.com / password, already verified
-
-# 5. Frontend (in a third terminal)
-cd frontend
-npm install
-npm run dev
+npm run build
+npm run start
 ```
 
-Then open **http://localhost:5173**. Either register a new account (the verification email lands in **Mailhog at http://localhost:8025** — no real inbox needed in dev) or sign in with the seeded `superadmin@example.com` / `password`.
+**Terminal 3 — backend worker** (sends the verification email — sign-up won't complete without it)
+```bash
+cd backend
+npm run start:worker
+```
+
+**One-off, from `backend/`, once the API is up (either terminal above, or a new one)**
+```bash
+npm run cli financial-data:seed    # loads data/financial_data.sql - 48 companies, 2022-2025
+npm run cli initials:seed          # optional: seeds superadmin@example.com / password, already verified
+```
+
+**Terminal 4 — frontend**
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run build
+npm run preview
+```
+
+Then open **http://localhost:4173**. Either register a new account (the verification email lands in **Mailhog at http://localhost:8025** — no real inbox needed) or sign in with the seeded `superadmin@example.com` / `password`.
 
 Migrations run automatically on backend boot (`main.ts`) — no separate migrate step needed.
 
-## Key environment variables (`backend/.env`)
+For active development instead, `npm run dev` (backend, runs the API + worker together) and `npm run dev` (frontend, port 5173) give hot-reload without the build step.
+
+## Key environment variables
+
+**Backend (`backend/.env`)**
 
 | Variable | Purpose |
 |---|---|
@@ -78,8 +99,9 @@ Migrations run automatically on backend boot (`main.ts`) — no separate migrate
 | `DATABASE_URL` / `REDIS_URL` / `AMQP_URL` | Point at the docker-compose services; defaults already match |
 | `FRONTEND_URL` | Used to build the verification-email link |
 | `JWT_SALT` | Signs access tokens - already set to a dev value in `.env.example` |
+| `CORS_ORIGIN` | Comma-separated allowed origins; must include the frontend's origin(s) - defaults already cover `:5173` (dev) and `:4173` (preview) |
 
-The frontend needs no `.env` — Vite's dev server proxies `/v1/*` straight to `http://localhost:3000` (see `frontend/vite.config.ts`).
+**Frontend (`frontend/.env`)** — `VITE_API_URL` (see `frontend/.env.example`) points the frontend straight at the backend (defaults to `http://localhost:3000`), rather than relying on Vite's dev/preview proxy. Every API call, including the SSE stream (raw `fetch`, not axios), is prefixed with it, which makes each request cross-origin from the browser's point of view - hence why the backend's `CORS_ORIGIN` above needs to list the frontend's port(s). For a real deployment with the frontend and backend on separate hosts, change `VITE_API_URL` to the backend's public URL and add the frontend's real origin to `CORS_ORIGIN`.
 
 ## Testing
 

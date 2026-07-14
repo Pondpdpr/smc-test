@@ -64,7 +64,13 @@ type ApiEnvelope<T> = Partial<IStandardResponse<T & Record<string, any>>> & {
 
 type RequestOptions = { headers?: Record<string, string> };
 
+// Empty by default - relative `/v1/...` calls resolve against the current origin,
+// which the dev/preview server proxies to the local backend (see vite.config.ts).
+// Set VITE_API_URL when the frontend and backend are deployed on separate hosts.
+export const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? '';
+
 const client = axios.create({
+  baseURL: API_BASE_URL,
   withCredentials: true, // carries the refresh-token cookie
 });
 
@@ -88,6 +94,7 @@ export function refreshAccessToken(): Promise<boolean> {
   if (!refreshPromise) {
     refreshPromise = axios
       .post<IStandardResponse<{ token: string }>>(apiPaths.auth.refresh, undefined, {
+        baseURL: API_BASE_URL,
         withCredentials: true,
         headers: { 'x-device': getDeviceId() },
       })

@@ -11,8 +11,20 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Fallback only - VITE_API_URL is set by default (see .env.example), so the app
+  // calls the backend directly and never actually routes through this proxy.
+  // It only matters if VITE_API_URL is cleared, making API calls relative again.
   server: {
     port: 5173,
+    proxy: {
+      '/v1': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
+  preview: {
+    port: 4173,
     proxy: {
       '/v1': {
         target: 'http://localhost:3000',
