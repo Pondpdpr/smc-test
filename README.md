@@ -37,7 +37,7 @@ frontend/src/
 ## Prerequisites
 
 - Docker + Docker Compose
-- Node — pinned in `backend/package.json`'s `engines` field; a minor patch mismatch is usually fine but `npm install` there uses `engine-strict=true`, so pass `--engine-strict=false` to any install command if it complains
+- Node — pinned in `backend/package.json`'s `engines` field as a guideline; a patch mismatch is fine, `npm install` won't block on it
 - An OpenAI API key
 
 ## Setup

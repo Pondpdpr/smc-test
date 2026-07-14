@@ -2,7 +2,7 @@
   "name": "kysely-template",
   "version": "0.0.1",
   "description": "",
-  "author": "Khunakorn Johnson",
+  "author": "Prach Boonnud <pboonnud@gmail.com>",
   "private": true,
   "license": "UNLICENSED",
   "engines": {
